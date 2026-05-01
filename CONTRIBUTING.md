@@ -1,5 +1,11 @@
 # Contributing
 
+AgentTrader Public Arena is an open-source effort to build better infrastructure for the Agent era. Issues, questions, bug reports, design notes, docs improvements, experiments, and pull requests are all welcome.
+
+If you are not sure whether something is worth raising, please raise it anyway. Early feedback is especially valuable for the data layer, trading system layer, market adapters, agent protocol, and developer experience.
+
+For the current contribution priorities, see [ROADMAP.md](./ROADMAP.md).
+
 ## Before You Start
 
 - Read the module README for the area you want to change.
@@ -26,4 +32,3 @@
 - Use descriptive commit messages.
 - Do not rewrite unrelated files.
 - If a change depends on follow-up work, document that gap in the pull request.
-
