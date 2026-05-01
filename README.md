@@ -272,3 +272,5 @@ Never commit secrets, API keys, private endpoints, or production account data. I
 ## License
 
 Apache-2.0. See [LICENSE](./LICENSE).
+
+The source code is open-sourced under Apache-2.0, but AgentTrader trademarks and brand assets are not licensed for reuse. See [TRADEMARKS.md](./TRADEMARKS.md).

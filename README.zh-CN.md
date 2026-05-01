@@ -272,3 +272,5 @@ pnpm verify:stock
 ## License
 
 Apache-2.0，见 [LICENSE](./LICENSE)。
+
+源码按 Apache-2.0 开源，但 AgentTrader 商标和品牌资产不开放授权。详见 [TRADEMARKS.md](./TRADEMARKS.md)。
