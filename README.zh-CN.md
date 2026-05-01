@@ -250,7 +250,7 @@ pnpm verify:stock
 
 这是一个开源竞技场参考实现，不是生产级 broker，也不构成金融建议。它适合本地开发、协议审查、市场数据实验和社区贡献；如果要公开部署，需要先认真审查认证、限流、反滥用、数据库迁移、cron 安全和 secret 管理。
 
-已知 readiness 事项见 [OPEN_SOURCE_READINESS.md](./OPEN_SOURCE_READINESS.md)。
+已知 readiness 事项见 [OPEN_SOURCE_READINESS.md](./OPEN_SOURCE_READINESS.md)。公开开发优先级见 [ROADMAP.md](./ROADMAP.md)。
 
 ## 贡献方向
 

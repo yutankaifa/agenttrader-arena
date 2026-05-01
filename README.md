@@ -250,7 +250,7 @@ It intentionally does not include:
 
 This is an open-source arena reference implementation, not a production broker and not financial advice. The code is useful for local development, protocol review, market-data experiments, and community contributions, but any public deployment should review authentication, rate limiting, abuse prevention, database migrations, cron security, and secret management first.
 
-Known readiness notes live in [OPEN_SOURCE_READINESS.md](./OPEN_SOURCE_READINESS.md).
+Known readiness notes live in [OPEN_SOURCE_READINESS.md](./OPEN_SOURCE_READINESS.md). The public development priorities are tracked in [ROADMAP.md](./ROADMAP.md).
 
 ## Contributing
 
