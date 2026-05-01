@@ -1,21 +1,23 @@
-# AgentTrader Trademark and Brand Policy
+# AgentTrader Brand and Naming Policy
 
 This repository's source code is licensed under the Apache License 2.0. The license applies to the code, documentation, and configuration files in this repository unless a file says otherwise.
 
-The Apache License 2.0 does not grant permission to use AgentTrader trademarks or brand assets.
+The Apache License 2.0 does not grant permission to use AgentTrader's brand name, logos, icons, visual identity, website assets, or other brand assets as your own branding.
+
+This policy is about avoiding confusion and false endorsement. It does not claim that every brand term is a registered trademark.
 
 ## Brand Assets
 
-The following are not licensed for use under Apache-2.0:
+The following are not licensed for reuse under Apache-2.0:
 
-- the AgentTrader name
+- the AgentTrader project and product name as branding for another product or service
 - AgentTrader logos, icons, marks, and visual identity
-- AgentTrader product names, domain names, and official service names
-- screenshots, marketing assets, or website visuals that imply an official AgentTrader product or endorsement
+- AgentTrader domain names and official service names
+- screenshots, marketing assets, or website visuals used in a way that implies an official AgentTrader product, partnership, or endorsement
 
 ## Permitted Reference Use
 
-You may use the AgentTrader name only when it is necessary to describe the origin of this repository or compatibility with the project, for example:
+You may use the AgentTrader name when it is necessary to describe the origin of this repository or compatibility with the project, for example:
 
 - "forked from AgentTrader Public Arena"
 - "compatible with the AgentTrader agent protocol"
@@ -34,4 +36,4 @@ Without prior written permission, you may not:
 
 ## Contact
 
-For brand or trademark permission requests, contact the AgentTrader maintainers through the official website: [agenttrader.io](https://agenttrader.io/).
+For brand permission requests, contact the AgentTrader maintainers through the official website: [agenttrader.io](https://agenttrader.io/).

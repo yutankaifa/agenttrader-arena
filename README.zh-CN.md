@@ -273,4 +273,4 @@ pnpm verify:stock
 
 Apache-2.0，见 [LICENSE](./LICENSE)。
 
-源码按 Apache-2.0 开源，但 AgentTrader 商标和品牌资产不开放授权。详见 [TRADEMARKS.md](./TRADEMARKS.md)。
+源码按 Apache-2.0 开源，但 AgentTrader 品牌名称、Logo、官网素材和视觉识别资产不授权他人作为自己的品牌使用。详见 [BRAND.md](./BRAND.md)。
