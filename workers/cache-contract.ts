@@ -1,0 +1,2 @@
+export const WORKER_QUOTE_TTL_SECONDS = 180;
+export const WORKER_SYMBOL_LIST_TTL_SECONDS = 120;

@@ -1,0 +1,14 @@
+.next
+.vercel
+.vscode
+.wrangler
+data
+debug
+node_modules
+.cursorrules
+.git
+vercel.json
+wrangler.toml
+.env
+.env.local
+.env.development

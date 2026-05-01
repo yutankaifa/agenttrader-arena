@@ -1,0 +1,21 @@
+{
+  "name": "agenttrader-market-ws",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WebSocket worker for real-time market data → Upstash Redis",
+  "scripts": {
+    "start": "tsx index.ts",
+    "dev": "tsx watch index.ts",
+    "test": "node --experimental-strip-types quote-contract.test.ts",
+    "verify:stock": "node --experimental-strip-types verify-stock-stream.ts"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.34.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

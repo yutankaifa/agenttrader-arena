@@ -1,0 +1,600 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+import { useSiteLocale } from '@/components/site-locale-provider';
+import { useOwnedAgents } from '@/hooks/use-owned-agents';
+import { cn } from '@/lib/cn';
+import { getTimestampFreshness } from '@/lib/data-freshness';
+import {
+  formatRiskStateLabel,
+  getRiskStateTone,
+} from '@/lib/public-trade-meta';
+import { formatRelativeTimestamp } from '@/lib/relative-time';
+
+type OwnedAgentLogAction = {
+  actionId: string;
+  symbol: string | null;
+  objectId: string | null;
+  side: string | null;
+  requestedUnits: number | null;
+  amountUsd: number | null;
+  market: string | null;
+  orderType: string;
+  status: string;
+  rejectionReason: string | null;
+};
+
+type OwnedAgentLogEntry = {
+  submissionId: string;
+  decisionId: string;
+  decisionRationale: string | null;
+  fallbackReasoningSummary: string;
+  reasonTag: string;
+  status: string;
+  rejectionReason: string | null;
+  receivedAt: string | null;
+  actions: OwnedAgentLogAction[];
+};
+
+type AgentLogsResponse =
+  | {
+      success: true;
+      data: OwnedAgentLogEntry[];
+    }
+  | {
+      success: false;
+      data?: unknown;
+    };
+
+function StatusBadge({ status }: { status: string }) {
+  const { t } = useSiteLocale();
+  const colors: Record<string, string> = {
+    running: 'bg-emerald-100 text-emerald-700',
+    ready: 'bg-blue-100 text-blue-700',
+    paused: 'bg-amber-100 text-amber-700',
+    idle: 'bg-[#f5f5f5] text-black/52',
+    error: 'bg-red-100 text-red-700',
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+        colors[status] || colors.idle
+      }`}
+    >
+      {formatStatusLabel(status, t)}
+    </span>
+  );
+}
+
+export function MyAgentPageClient() {
+  const router = useRouter();
+  const { localeTag, t } = useSiteLocale();
+  const { agents, loading, loadAgents, session, sessionPending } = useOwnedAgents();
+  const [pendingActionById, setPendingActionById] = useState<Record<string, string>>(
+    {}
+  );
+  const [xLinkDraft, setXLinkDraft] = useState('');
+  const [savingXLink, setSavingXLink] = useState(false);
+  const [agentLogsById, setAgentLogsById] = useState<
+    Record<string, OwnedAgentLogEntry[]>
+  >({});
+  const [logsLoadingById, setLogsLoadingById] = useState<Record<string, boolean>>({});
+
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(localeTag, {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+      }),
+    [localeTag]
+  );
+
+  useEffect(() => {
+    if (!sessionPending && !session?.user) {
+      router.push('/sign-in?callbackURL=/my-agent');
+    }
+  }, [router, session?.user, sessionPending]);
+
+  useEffect(() => {
+    const sharedXLink =
+      agents.find((agent) => typeof agent.xUrl === 'string' && agent.xUrl.trim())?.xUrl ?? '';
+    setXLinkDraft(sharedXLink);
+  }, [agents]);
+
+  useEffect(() => {
+    if (!session?.user || agents.length === 0) {
+      setAgentLogsById({});
+      setLogsLoadingById({});
+      return;
+    }
+
+    let cancelled = false;
+    setLogsLoadingById(
+      Object.fromEntries(agents.map((agent) => [agent.id, true])) as Record<string, boolean>
+    );
+
+    async function loadRecentLogs() {
+      const entries = await Promise.all(
+        agents.map(async (agent) => {
+          try {
+            const response = await fetch(`/api/agents/${agent.id}/logs?page=1&pageSize=3`, {
+              cache: 'no-store',
+            });
+            const payload = (await response.json()) as AgentLogsResponse;
+            const logs =
+              response.ok && payload.success && Array.isArray(payload.data)
+                ? payload.data
+                : [];
+            return [agent.id, logs] as const;
+          } catch {
+            return [agent.id, []] as const;
+          }
+        })
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      setAgentLogsById(Object.fromEntries(entries) as Record<string, OwnedAgentLogEntry[]>);
+      setLogsLoadingById({});
+    }
+
+    void loadRecentLogs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [agents, session?.user]);
+
+  async function runAgentAction(agentId: string, action: 'pause' | 'resume' | 'delete') {
+    setPendingActionById((current) => ({ ...current, [agentId]: action }));
+
+    try {
+      if (action === 'delete') {
+        const confirmed = window.confirm(t((m) => m.myAgent.deleteConfirm));
+        if (!confirmed) {
+          return;
+        }
+      }
+
+      const response = await fetch(
+        action === 'delete' ? `/api/agents/${agentId}` : `/api/agents/${agentId}/${action}`,
+        {
+          method: action === 'delete' ? 'DELETE' : 'POST',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} agent`);
+      }
+
+      await loadAgents();
+    } catch {
+      window.alert(
+        action === 'delete'
+          ? t((m) => m.myAgent.deleteFailed)
+          : action === 'pause'
+            ? t((m) => m.myAgent.pauseFailed)
+            : t((m) => m.myAgent.resumeFailed)
+      );
+    } finally {
+      setPendingActionById((current) => {
+        const next = { ...current };
+        delete next[agentId];
+        return next;
+      });
+    }
+  }
+
+  async function saveXUrlForAllAgents() {
+    setSavingXLink(true);
+    try {
+      for (const agent of agents) {
+        const response = await fetch(`/api/agents/${agent.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            xUrl: xLinkDraft,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save X URL');
+        }
+      }
+
+      await loadAgents();
+    } catch {
+      window.alert(t((m) => m.myAgent.xLinkSaveFailed));
+    } finally {
+      setSavingXLink(false);
+    }
+  }
+
+  if (sessionPending || loading) {
+    return (
+      <div className="mx-auto max-w-6xl px-6 pb-12 pt-24 md:pb-16 md:pt-28">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-48 rounded bg-[#f2f2ee]" />
+          <div className="h-4 w-72 rounded bg-[#f2f2ee]" />
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-36 rounded-xl border border-black/10 bg-[#fafafa]"
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-6 pb-12 pt-24 md:pb-16 md:pt-28">
+      <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-[#171717]">
+            {t((m) => m.myAgent.title)}
+          </h1>
+          <p className="mt-2 text-black/56">{t((m) => m.myAgent.description)}</p>
+        </div>
+
+        {agents.length > 0 ? (
+          <div className="w-full max-w-xl border border-black/10 bg-white p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="shrink-0 text-sm text-black/56">{t((m) => m.myAgent.xLink)}</span>
+                <input
+                  value={xLinkDraft}
+                  onChange={(event) => setXLinkDraft(event.target.value)}
+                  placeholder={t((m) => m.myAgent.xLinkPlaceholder)}
+                  className="h-10 min-w-0 flex-1 border border-black/10 px-3 text-sm text-[#171717] outline-none transition focus:border-black/24"
+                />
+                <button
+                  type="button"
+                  onClick={() => void saveXUrlForAllAgents()}
+                  disabled={savingXLink}
+                  className="inline-flex h-10 items-center justify-center border border-black/10 px-3 text-sm font-medium text-[#171717] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {savingXLink
+                    ? t((m) => m.myAgent.xLinkSaving)
+                    : t((m) => m.myAgent.xLinkSave)}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {agents.length === 0 ? (
+        <div className="rounded-xl border border-black/10 bg-white px-6 py-14 text-center">
+          <p className="text-sm font-medium text-[#171717]">{t((m) => m.myAgent.emptyTitle)}</p>
+          <p className="mt-2 text-sm text-black/56">{t((m) => m.myAgent.emptyDescription)}</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {agents.map((agent) => (
+            <div
+              key={agent.id}
+              className="rounded-xl border border-black/10 bg-white p-5 transition-all hover:border-black/20 hover:shadow-sm"
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(23,23,23,0.08),rgba(23,23,23,0.2))] text-sm font-bold text-[#171717]">
+                    {agent.name.charAt(0)}
+                  </div>
+                  <span className="font-medium text-[#171717]">{agent.name}</span>
+                </div>
+                <StatusBadge
+                  status={agent.status === 'paused' ? 'paused' : agent.runnerStatus}
+                />
+              </div>
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                <ToneBadge tone={getRiskStateTone(agent.riskTag, agent.closeOnly)}>
+                  {formatRiskStateLabel(agent.riskTag, agent.closeOnly, t)}
+                </ToneBadge>
+                <ToneBadge tone={getHeartbeatTone(agent.lastHeartbeatAt)}>
+                  {formatHeartbeatBadge(agent.lastHeartbeatAt, localeTag, t)}
+                </ToneBadge>
+              </div>
+
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-black/56">{t((m) => m.myAgent.equity)}</span>
+                  <span className="font-medium text-[#171717]">
+                    {currencyFormatter.format(agent.totalEquity)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-black/56">{t((m) => m.myAgent.availableCash)}</span>
+                  <span className="text-black/56">
+                    {currencyFormatter.format(agent.availableCash)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-black/56">{t((m) => m.myAgent.return)}</span>
+                  <span
+                    className={
+                      agent.returnRate >= 0
+                        ? 'font-semibold text-emerald-600'
+                        : 'font-semibold text-red-600'
+                    }
+                  >
+                    {agent.returnRate >= 0 ? '+' : ''}
+                    {new Intl.NumberFormat(localeTag, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    }).format(agent.returnRate)}
+                    %
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-black/56">{t((m) => m.myAgent.heartbeat)}</span>
+                  <span className="text-right text-black/56">
+                    {agent.lastHeartbeatAt
+                      ? formatRelativeTimestamp(agent.lastHeartbeatAt, localeTag)
+                      : t((m) => m.myAgent.noHeartbeat)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-5 border-t border-black/10 pt-4">
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-black/42">
+                  {t((m) => m.myAgent.latestDecisions)}
+                </p>
+                <div className="mt-3 space-y-2">
+                  {logsLoadingById[agent.id] ? (
+                    <p className="text-sm text-black/56">{t((m) => m.myAgent.loadingDecisions)}</p>
+                  ) : (agentLogsById[agent.id] ?? []).length === 0 ? (
+                    <p className="text-sm text-black/56">{t((m) => m.myAgent.noDecisions)}</p>
+                  ) : (
+                    (agentLogsById[agent.id] ?? []).map((entry) => {
+                      const rejectionReason = getEntryRejectionReason(entry);
+
+                      return (
+                        <article
+                          key={entry.submissionId}
+                          className="rounded-lg border border-black/10 bg-[#fafafa] px-3 py-3"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <DecisionStatusBadge status={entry.status} />
+                              {entry.reasonTag ? (
+                                <span className="text-xs italic text-black/48">
+                                  {entry.reasonTag}
+                                </span>
+                              ) : null}
+                            </div>
+                            <span className="text-xs text-black/42">
+                              {entry.receivedAt
+                                ? formatRelativeTimestamp(entry.receivedAt, localeTag)
+                                : '--'}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm font-medium text-[#171717]">
+                            {formatLogHeadline(entry, t)}
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-black/58">
+                            {truncateText(
+                              entry.decisionRationale ||
+                                entry.fallbackReasoningSummary ||
+                                entry.reasonTag ||
+                                entry.decisionId,
+                              140
+                            )}
+                          </p>
+                          {rejectionReason ? (
+                            <p className="mt-2 text-sm text-red-700">
+                              {`${entry.status === 'rejected'
+                                ? t((m) => m.myAgent.rejectedBecause)
+                                : t((m) => m.myAgent.actionRejectedBecause)}: ${formatMachineReason(rejectionReason)}`}
+                            </p>
+                          ) : null}
+                        </article>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/agents/${agent.id}`)}
+                  className="inline-flex h-9 items-center justify-center border border-black/10 px-3 text-sm font-medium text-[#171717] transition hover:bg-[#fafafa]"
+                >
+                  {t((m) => m.myAgent.view)}
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(pendingActionById[agent.id])}
+                  onClick={() =>
+                    void runAgentAction(
+                      agent.id,
+                      agent.status === 'paused' ? 'resume' : 'pause'
+                    )
+                  }
+                  className="inline-flex h-9 items-center justify-center border border-black/10 px-3 text-sm font-medium text-[#171717] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {pendingActionById[agent.id] === 'pause'
+                    ? t((m) => m.myAgent.pausing)
+                    : pendingActionById[agent.id] === 'resume'
+                      ? t((m) => m.myAgent.resuming)
+                      : agent.status === 'paused'
+                        ? t((m) => m.myAgent.resume)
+                        : t((m) => m.myAgent.pause)}
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(pendingActionById[agent.id])}
+                  onClick={() => void runAgentAction(agent.id, 'delete')}
+                  className="inline-flex h-9 items-center justify-center border border-red-200 px-3 text-sm font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {pendingActionById[agent.id] === 'delete'
+                    ? t((m) => m.myAgent.deleting)
+                    : t((m) => m.myAgent.delete)}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToneBadge({
+  children,
+  tone,
+}: {
+  children: string;
+  tone: 'green' | 'amber' | 'red';
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-2.5 py-1 text-xs',
+        tone === 'green'
+          ? 'bg-emerald-100 text-emerald-700'
+          : tone === 'amber'
+            ? 'bg-amber-100 text-amber-700'
+            : 'bg-red-100 text-red-700'
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function DecisionStatusBadge({ status }: { status: string }) {
+  const { t } = useSiteLocale();
+  const normalized = status.toLowerCase();
+  const tone =
+    normalized === 'accepted'
+      ? 'green'
+      : normalized === 'rejected'
+        ? 'red'
+        : 'amber';
+
+  return (
+    <ToneBadge tone={tone}>
+      {normalized === 'accepted'
+        ? t((m) => m.myAgent.statusAccepted)
+        : normalized === 'rejected'
+          ? t((m) => m.myAgent.statusRejected)
+          : t((m) => m.myAgent.statusPending)}
+    </ToneBadge>
+  );
+}
+
+function getEntryRejectionReason(entry: OwnedAgentLogEntry) {
+  if (entry.rejectionReason) {
+    return entry.rejectionReason;
+  }
+
+  return (
+    entry.actions.find(
+      (action) =>
+        typeof action.rejectionReason === 'string' && Boolean(action.rejectionReason)
+    )?.rejectionReason ?? null
+  );
+}
+
+function formatLogHeadline(
+  entry: OwnedAgentLogEntry,
+  t: ReturnType<typeof useSiteLocale>['t']
+) {
+  const primaryAction = entry.actions[0] ?? null;
+  if (!primaryAction) {
+    return entry.reasonTag || entry.decisionId;
+  }
+
+  const side =
+    primaryAction.side?.toLowerCase() === 'buy'
+      ? t((m) => m.homeDashboard.sideBuyUpper)
+      : primaryAction.side?.toLowerCase() === 'sell'
+        ? t((m) => m.homeDashboard.sideSellUpper)
+        : primaryAction.side?.toUpperCase() ?? 'ACTION';
+  const symbol =
+    primaryAction.symbol ?? primaryAction.objectId ?? entry.reasonTag ?? entry.decisionId;
+  const market = primaryAction.market ? ` | ${primaryAction.market}` : '';
+
+  return `${side} ${symbol}${market}`;
+}
+
+function formatMachineReason(reason: string) {
+  return reason.replace(/[_-]+/g, ' ').trim();
+}
+
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
+function getHeartbeatTone(timestamp: string | null) {
+  const freshness = getTimestampFreshness(timestamp, {
+    freshMs: 20 * 60 * 1000,
+    delayedMs: 60 * 60 * 1000,
+  });
+
+  if (freshness.level === 'fresh') return 'green' as const;
+  if (freshness.level === 'delayed') return 'amber' as const;
+  return 'red' as const;
+}
+
+function formatHeartbeatBadge(
+  timestamp: string | null,
+  locale: string,
+  t: ReturnType<typeof useSiteLocale>['t']
+) {
+  const freshness = getTimestampFreshness(timestamp, {
+    freshMs: 20 * 60 * 1000,
+    delayedMs: 60 * 60 * 1000,
+  });
+
+  if (!timestamp || freshness.level === 'unavailable') {
+    return t((m) => m.myAgent.noHeartbeat);
+  }
+
+  if (freshness.level === 'fresh') {
+    return `${t((m) => m.publicAgent.heartbeatFresh)} | ${formatRelativeTimestamp(timestamp, locale)}`;
+  }
+
+  if (freshness.level === 'delayed') {
+    return `${t((m) => m.publicAgent.heartbeatDelayed)} | ${formatRelativeTimestamp(timestamp, locale)}`;
+  }
+
+  return `${t((m) => m.publicAgent.heartbeatStale)} | ${formatRelativeTimestamp(timestamp, locale)}`;
+}
+
+function formatStatusLabel(
+  status: string,
+  t: ReturnType<typeof useSiteLocale>['t']
+) {
+  switch (status) {
+    case 'running':
+      return t((m) => m.myAgent.statusRunning);
+    case 'ready':
+      return t((m) => m.myAgent.statusReady);
+    case 'paused':
+      return t((m) => m.myAgent.statusPaused);
+    case 'idle':
+      return t((m) => m.myAgent.statusIdle);
+    case 'error':
+      return t((m) => m.myAgent.statusError);
+    default:
+      return status;
+  }
+}

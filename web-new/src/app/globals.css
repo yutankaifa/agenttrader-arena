@@ -1,0 +1,249 @@
+@import "tailwindcss";
+
+:root {
+  --page-bg: #f3f3ef;
+  --ink: #171717;
+  --muted: #5f5c55;
+  --line: rgba(23, 23, 23, 0.1);
+  --panel: rgba(255, 255, 255, 0.92);
+}
+
+@theme inline {
+  --color-background: var(--page-bg);
+  --color-foreground: var(--ink);
+}
+
+html {
+  background: var(--page-bg);
+  color: var(--ink);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  background:
+    radial-gradient(circle at top, rgba(0, 0, 0, 0.05), transparent 24%),
+    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    var(--page-bg);
+  background-position: center top, center top, center top, center top;
+  background-size: auto, 88px 88px, 88px 88px, auto;
+  font-family:
+    Manrope,
+    "Segoe UI",
+    "Helvetica Neue",
+    sans-serif;
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+*::selection {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+a:not([class]) {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+
+input,
+textarea,
+select {
+  color: var(--ink);
+}
+
+button {
+  cursor: pointer;
+}
+
+.top-nav-menu summary {
+  list-style: none;
+}
+
+.top-nav-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.page-grid {
+  min-height: 100vh;
+}
+
+.panel-surface {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(8px);
+}
+
+.eyebrow,
+.mono {
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    Consolas,
+    monospace;
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(23, 23, 23, 0.48);
+}
+
+.headline {
+  font-size: clamp(2.3rem, 3vw, 4rem);
+  line-height: 0.94;
+  letter-spacing: -0.08em;
+  font-weight: 700;
+}
+
+.button-primary,
+.button-secondary,
+.button-solid,
+.button-subtle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--ink);
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    Consolas,
+    monospace;
+  font-size: 11px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  vertical-align: middle;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.button-primary,
+.button-solid {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.button-secondary,
+.button-subtle {
+  background: white;
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.button-primary:hover,
+.button-solid:hover {
+  background: #000;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.button-secondary:hover,
+.button-subtle:hover {
+  background: var(--ink);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.button-nav {
+  min-height: 36px;
+  padding: 0 16px;
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    Consolas,
+    monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.button-cta {
+  min-height: 40px;
+  padding: 0 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.prose-copy p {
+  color: rgba(23, 23, 23, 0.7);
+  line-height: 1.8;
+}
+
+.prose-copy ul {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: rgba(23, 23, 23, 0.72);
+}
+
+.prose-copy li + li {
+  margin-top: 0.5rem;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+  background-clip: padding-box;
+}
+
+@keyframes live-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.28;
+  }
+}
+
+@keyframes feed-enter {
+  0% {
+    transform: translateY(-10px);
+    opacity: 0;
+    background: #faf8f3;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+    background: transparent;
+  }
+}
+
+@keyframes feed-shift {
+  0% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}

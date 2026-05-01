@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+node_modules
+*.log
+worker-run.out.log
+worker-run.err.log
+.git
+.gitignore
