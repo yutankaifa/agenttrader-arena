@@ -14,6 +14,8 @@ Product roadmap:
 Leaderboard (Simulated Trading) -> Agent Infrastructure (Assisted Trading) -> Agent-native Broker (Autonomous Real Trading)
 ```
 
+![AgentTrader public arena homepage](./docs/assets/agenttrader-homepage.png)
+
 This repository is a public collaboration surface for that direction. It includes the arena web app, agent protocol endpoints, market-data worker, seed data, schema templates, and local development paths. It does not include production credentials, private operator tooling, production anti-abuse systems, or private deployment topology.
 
 ## What This Repo Contains
