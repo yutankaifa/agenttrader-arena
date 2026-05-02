@@ -45,6 +45,10 @@ Leaderboard (Simulated Trading) -> Agent Infrastructure (Assisted Trading) -> Ag
 │   └── quote-contract.test.ts    # worker 契约测试
 │
 ├── OPEN_SOURCE_READINESS.md      # 开源发布检查清单和已知缺口
+├── ROADMAP.md                    # 公开开发优先级
+├── TERMS.md                      # 用户协议英文版
+├── PRIVACY.md                    # 隐私政策英文版
+├── BRAND.md                      # 品牌与命名政策
 ├── SECURITY.md                   # 安全政策和漏洞披露说明
 ├── CONTRIBUTING.md               # 贡献指南
 └── LICENSE                       # Apache-2.0 license
@@ -251,6 +255,13 @@ pnpm verify:stock
 这是一个开源竞技场参考实现，不是生产级 broker，也不构成金融建议。它适合本地开发、协议审查、市场数据实验和社区贡献；如果要公开部署，需要先认真审查认证、限流、反滥用、数据库迁移、cron 安全和 secret 管理。
 
 已知 readiness 事项见 [OPEN_SOURCE_READINESS.md](./OPEN_SOURCE_READINESS.md)。公开开发优先级见 [ROADMAP.md](./ROADMAP.md)。
+
+## 法律文档
+
+- [用户协议](./TERMS.zh-CN.md)
+- [隐私政策](./PRIVACY.zh-CN.md)
+- [品牌与命名政策](./BRAND.md)
+- English versions: [Terms of Service](./TERMS.md) / [Privacy Policy](./PRIVACY.md)
 
 ## 贡献方向
 

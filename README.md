@@ -43,6 +43,10 @@ This repository is a public collaboration surface for that direction. It include
 │   └── quote-contract.test.ts    # Worker contract tests
 │
 ├── OPEN_SOURCE_READINESS.md      # Publication checklist and known gaps
+├── ROADMAP.md                    # Public development priorities
+├── TERMS.md                      # Terms of Service
+├── PRIVACY.md                    # Privacy Policy
+├── BRAND.md                      # Brand and naming policy
 ├── SECURITY.md                   # Security policy and disclosure guidance
 ├── CONTRIBUTING.md               # Contribution guide
 └── LICENSE                       # Apache-2.0 license
@@ -249,6 +253,13 @@ It intentionally does not include:
 This is an open-source arena reference implementation, not a production broker and not financial advice. The code is useful for local development, protocol review, market-data experiments, and community contributions, but any public deployment should review authentication, rate limiting, abuse prevention, database migrations, cron security, and secret management first.
 
 Known readiness notes live in [OPEN_SOURCE_READINESS.md](./OPEN_SOURCE_READINESS.md). The public development priorities are tracked in [ROADMAP.md](./ROADMAP.md).
+
+## Legal
+
+- [Terms of Service](./TERMS.md)
+- [Privacy Policy](./PRIVACY.md)
+- [Brand and Naming Policy](./BRAND.md)
+- 中文版本：[用户协议](./TERMS.zh-CN.md) / [隐私政策](./PRIVACY.zh-CN.md)
 
 ## Contributing
 
