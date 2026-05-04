@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 import { useSiteLocale, useSiteLocaleButtonLabel } from '@/components/site-locale-provider';
+import { SiteLogo } from '@/components/site-logo';
 import { SignOutButton } from '@/components/sign-out-button';
 
 type TopNavProps = {
@@ -12,6 +13,8 @@ type TopNavProps = {
 };
 
 export function TopNav({ userName, authEnabled }: TopNavProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
   const { isZh, toggleLocale, t } = useSiteLocale();
   const localeButtonLabel = useSiteLocaleButtonLabel();
   const localeSwitchLabel = isZh
@@ -30,38 +33,81 @@ export function TopNav({ userName, authEnabled }: TopNavProps) {
     { href: '/join', label: t((m) => m.nav.join) },
   ];
 
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (!mobileMenuRef.current?.contains(target)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isMobileMenuOpen]);
+
   return (
     <header className="fixed inset-x-0 top-0 z-50 bg-white/96 backdrop-blur-sm">
-      <div className="mx-auto max-w-[1480px] border-x border-b border-black/10 bg-white px-4 py-4 md:px-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center justify-between gap-4">
-            <Link
-              href="/"
-              className="text-2xl font-semibold tracking-[-0.05em] text-[#171717]"
-            >
+      <div
+        ref={mobileMenuRef}
+        className="mx-auto max-w-[1480px] border-x border-b border-black/10 bg-white px-4 py-3 md:px-6 md:py-4"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <SiteLogo size={40} priority />
+            <span className="text-xl font-semibold tracking-[-0.05em] text-[#171717] md:text-2xl">
               AgentTrader
-            </Link>
+            </span>
+          </Link>
 
-            <div className="flex items-center gap-2 md:hidden">
-              <button
-                aria-label={localeSwitchLabel}
-                className={localeButtonClass}
-                title={localeSwitchLabel}
-                type="button"
-                onClick={toggleLocale}
-              >
-                {localeButtonLabel}
-              </button>
-              <TopNavUserActions
-                authEnabled={authEnabled}
-                signInButtonClass={signInButtonClass}
-                userInitial={userInitial}
-                userName={userName}
+          <button
+            aria-expanded={isMobileMenuOpen}
+            aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            className="inline-flex h-10 items-center gap-3 border border-black/10 bg-white px-3 md:hidden"
+            type="button"
+            onClick={() => setIsMobileMenuOpen((open) => !open)}
+          >
+            <span className="mono text-[11px] uppercase tracking-[0.18em] text-[#171717]">
+              Menu
+            </span>
+            <span className="flex w-4 flex-col gap-1.5" aria-hidden="true">
+              <span
+                className={`h-px bg-[#171717] transition-transform duration-200 ${
+                  isMobileMenuOpen ? 'translate-y-[7px] rotate-45' : ''
+                }`}
               />
-            </div>
-          </div>
+              <span
+                className={`h-px bg-[#171717] transition-opacity duration-200 ${
+                  isMobileMenuOpen ? 'opacity-0' : 'opacity-100'
+                }`}
+              />
+              <span
+                className={`h-px bg-[#171717] transition-transform duration-200 ${
+                  isMobileMenuOpen ? '-translate-y-[7px] -rotate-45' : ''
+                }`}
+              />
+            </span>
+          </button>
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
+          <div className="hidden md:flex md:items-center md:gap-2">
             <nav className="flex flex-wrap gap-2">
               {links.map((item) => (
                 <Link
@@ -74,27 +120,124 @@ export function TopNav({ userName, authEnabled }: TopNavProps) {
               ))}
             </nav>
 
-            <div className="hidden md:flex md:items-center md:gap-2">
+            <button
+              aria-label={localeSwitchLabel}
+              className={localeButtonClass}
+              title={localeSwitchLabel}
+              type="button"
+              onClick={toggleLocale}
+            >
+              {localeButtonLabel}
+            </button>
+            <TopNavUserActions
+              authEnabled={authEnabled}
+              signInButtonClass={signInButtonClass}
+              userInitial={userInitial}
+              userName={userName}
+            />
+          </div>
+        </div>
+
+        <div
+          className={`overflow-hidden transition-all duration-200 md:hidden ${
+            isMobileMenuOpen ? 'mt-3 max-h-[420px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="border-t border-black/10 pt-3">
+            <nav className="grid gap-2">
+              {links.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`${subtleButtonClass} justify-between px-4`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+
+            <div className="mt-3 grid gap-2">
               <button
                 aria-label={localeSwitchLabel}
-                className={localeButtonClass}
+                className={`${subtleButtonClass} px-4`}
                 title={localeSwitchLabel}
                 type="button"
-                onClick={toggleLocale}
+                onClick={() => {
+                  toggleLocale();
+                  setIsMobileMenuOpen(false);
+                }}
               >
                 {localeButtonLabel}
               </button>
-              <TopNavUserActions
+
+              <TopNavMobileAccountActions
                 authEnabled={authEnabled}
                 signInButtonClass={signInButtonClass}
-                userInitial={userInitial}
                 userName={userName}
+                onNavigate={() => setIsMobileMenuOpen(false)}
               />
             </div>
           </div>
         </div>
       </div>
     </header>
+  );
+}
+
+function TopNavMobileAccountActions({
+  authEnabled,
+  userName,
+  signInButtonClass,
+  onNavigate,
+}: {
+  authEnabled: boolean;
+  userName?: string | null;
+  signInButtonClass: string;
+  onNavigate: () => void;
+}) {
+  const { t } = useSiteLocale();
+
+  if (!authEnabled) {
+    return null;
+  }
+
+  if (!userName) {
+    return (
+      <Link
+        href="/sign-in?callbackURL=/my-agent"
+        className={`${signInButtonClass} w-full justify-center`}
+        onClick={onNavigate}
+      >
+        {t((m) => m.nav.signIn)}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="border border-black/10 bg-[#fafafa]">
+      <div className="flex items-center justify-between gap-3 border-b border-black/10 px-4 py-3">
+        <div>
+          <p className="mono text-[10px] uppercase tracking-[0.18em] text-black/40">
+            Account
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#171717]">{userName}</p>
+        </div>
+        <Link
+          href="/my-agent"
+          className="button-subtle button-nav px-3"
+          onClick={onNavigate}
+        >
+          {t((m) => m.nav.myAgents)}
+        </Link>
+      </div>
+      <div className="p-2">
+        <SignOutButton
+          className="flex w-full items-center justify-center px-4 py-2 text-center text-sm text-[#171717] transition hover:bg-white"
+          onClick={onNavigate}
+        />
+      </div>
+    </div>
   );
 }
 

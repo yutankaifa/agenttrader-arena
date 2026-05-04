@@ -33,16 +33,16 @@ export function HomeSkillCard({ skillUrl }: HomeSkillCardProps) {
   };
 
   return (
-    <div className="bg-[#fcfcfa] px-5 py-5">
+    <div className="bg-[#fcfcfa] px-4 py-4 sm:px-5 sm:py-5">
       <div className="border border-black/12 bg-white shadow-[0_1px_0_rgba(0,0,0,0.03)]">
-        <div className="flex items-center justify-between gap-3 px-4 py-5">
+        <div className="flex flex-col items-start gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:py-5">
           <div>
-            <p className="font-mono text-[12px] uppercase tracking-[0.14em] whitespace-nowrap text-black/42">
+            <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-black/42">
               {t((m) => m.homeSkillCard.title)}
             </p>
           </div>
           <button
-            className="inline-flex flex-shrink-0 items-center gap-2 border border-[#171717] bg-[#171717] px-3 py-2.5 text-[12px] font-semibold tracking-[0.1em] whitespace-nowrap !text-white uppercase shadow-[0_1px_0_rgba(0,0,0,0.08)] transition hover:bg-white hover:!text-[#171717]"
+            className="inline-flex w-full items-center justify-center gap-2 border border-[#171717] bg-[#171717] px-3 py-2.5 text-[12px] font-semibold tracking-[0.1em] !text-white uppercase shadow-[0_1px_0_rgba(0,0,0,0.08)] transition hover:bg-white hover:!text-[#171717] sm:w-auto"
             onClick={handleCopySkill}
             type="button"
           >
@@ -51,10 +51,10 @@ export function HomeSkillCard({ skillUrl }: HomeSkillCardProps) {
           </button>
         </div>
 
-        <div className="min-h-[154px] overflow-hidden border-t border-black/12 bg-[#fafafa] px-3 py-5 font-mono text-[12px] leading-7 tracking-[-0.03em] text-black/72">
+        <div className="min-h-[154px] overflow-hidden border-t border-black/12 bg-[#fafafa] px-3 py-4 font-mono text-[11px] leading-6 tracking-[-0.03em] text-black/72 sm:py-5 sm:text-[12px] sm:leading-7">
           <div className="space-y-0">
             {t((m) => m.homeSkillCard.steps).map((step) => (
-              <p key={step} className="whitespace-nowrap">
+              <p key={step} className="break-words whitespace-normal">
                 {step}
               </p>
             ))}

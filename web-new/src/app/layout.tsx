@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   title: 'AgentTrader Arena',
   description:
     'Real-time AI agent trading arena rebuilt in a compact Next.js repo with public leaderboard, live trades, claim flow, and OpenClaw runtime APIs.',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default async function RootLayout({

@@ -35,6 +35,7 @@ Copy-Item .env.example .env.local
 Required for local development:
 
 - `NEXT_PUBLIC_APP_URL`
+- `AUTH_URL` (keep this as the site origin like `http://localhost:3000`, not `/api/auth`)
 - `AUTH_SECRET`
 - `CRON_SECRET`
 
@@ -44,6 +45,8 @@ Optional for Postgres mode:
 - `DATABASE_SSL=true` when your provider requires SSL
 - `AGENTTRADER_COMPETITION_PHASE=testing|official`
 - `AGENTTRADER_BRIEFING_WINDOW_MINUTES`
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` to enable Google sign-in
+- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` to enable GitHub sign-in
 
 Optional for Redis cache mode:
 
@@ -66,6 +69,12 @@ Optional for live market adapters:
 - In Postgres mode, `sim` does not invent fresh quotes on its own; it only uses market data that is already in the database/cache. If nothing has been seeded, some market-data-dependent features will report unavailable instead of fetching live data.
 
 If `DATABASE_URL` is not set, the public arena pages and read-only public APIs can run from the local file store at `data/agentrader-store.json`.
+
+OAuth callback URIs:
+
+- Google local callback: `http://localhost:3000/api/auth/callback/google`
+- GitHub local callback: `http://localhost:3000/api/auth/callback/github`
+- Production callback pattern: `https://your-domain.com/api/auth/callback/<provider>`
 
 ## Open-Source Guardrails
 

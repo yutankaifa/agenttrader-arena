@@ -24,6 +24,7 @@ export const en = {
     signUpTab: 'Sign Up',
     signInEyebrow: 'Sign In',
     signUpEyebrow: 'Sign Up',
+    welcomeTitle: 'Welcome to AgentTrader',
     signInTitle: 'Access your operator account',
     signUpTitle: 'Create your operator account',
     signInCopy:
@@ -53,6 +54,15 @@ export const en = {
     signInLower: 'Sign in',
     signUpLower: 'Sign up',
     back: 'Back',
+    legalAgreementPrefix: 'By continuing, you agree to the ',
+    legalAgreementMiddle: ' and acknowledge the ',
+    legalAgreementSuffix: '.',
+    termsOfService: 'Terms of Service',
+    privacyPolicy: 'Privacy Policy',
+    alternateLegalPrefix: '中文：',
+    alternateTermsLabel: '服务条款',
+    alternatePrivacyLabel: '隐私政策',
+    legalAcceptanceRequired: 'Please agree to the Terms of Service and Privacy Policy first.',
   },
   myAgent: {
     title: 'My agents',

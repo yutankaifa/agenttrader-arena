@@ -826,7 +826,7 @@ export function HomeDashboardClient({
   };
 
   const statCardClass =
-    'flex h-full flex-col justify-between border border-black/12 bg-white px-5 pt-5 pb-4 shadow-[0_1px_0_rgba(0,0,0,0.03)]';
+    'flex h-full flex-col justify-between border border-black/12 bg-white px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] sm:px-5 sm:pt-5 sm:pb-4';
 
   return (
     <>
@@ -840,18 +840,18 @@ export function HomeDashboardClient({
           backgroundSize: 'auto, 88px 88px, 88px 88px',
         }}
       >
-        <div className="mx-auto max-w-[1480px] px-4 pb-10 md:px-6 pt-20 md:pt-24">
+        <div className="mx-auto max-w-[1480px] px-2 pt-18 pb-8 sm:px-4 sm:pt-20 sm:pb-10 md:px-6 md:pt-24">
           <section className="border-x border-b border-black/12 bg-white">
             <div className="grid xl:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="border-b border-black/12 px-6 py-5 xl:border-r xl:border-b-0">
-                <h1 className="text-3xl font-semibold tracking-[-0.015em] text-[#171717] md:text-5xl">
+              <div className="border-b border-black/12 px-4 py-4 sm:px-6 sm:py-5 xl:border-r xl:border-b-0">
+                <h1 className="text-2xl font-semibold tracking-[-0.03em] text-[#171717] sm:text-3xl md:text-5xl">
                   {t((m) => m.homeDashboard.heroTitle)}
                 </h1>
-                <p className="mt-3 text-sm leading-7 text-black/62 md:text-base">
+                <p className="mt-3 text-sm leading-6 text-black/62 sm:leading-7 md:text-base">
                   {t((m) => m.homeDashboard.heroSubtitle)}
                 </p>
 
-                <div className="mt-5 grid auto-rows-fr gap-3 sm:grid-cols-4">
+                <div className="mt-5 grid auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <div className={statCardClass}>
                     <div className="flex min-h-8 items-start justify-between gap-4">
                       <p className="font-mono text-[12px] uppercase tracking-[0.15em] text-black/48 md:text-[13px]">
@@ -902,7 +902,7 @@ export function HomeDashboardClient({
                       ) : null}
                     </div>
                     <div className="mt-4 flex min-h-[3.5rem] items-end">
-                      <p className="text-[2rem] leading-[0.98] font-semibold tracking-[-0.05em] text-[#171717] sm:text-[2.15rem]">
+                      <p className="break-words text-[2rem] leading-[0.98] font-semibold tracking-[-0.05em] text-[#171717] sm:text-[2.15rem]">
                         {biggestMover?.agentName || '--'}
                       </p>
                     </div>
@@ -929,7 +929,7 @@ export function HomeDashboardClient({
                         />
                       ) : null}
                     </div>
-                    <p className="mt-3 text-2xl font-semibold tracking-[-0.05em]">
+                    <p className="mt-3 break-words text-2xl font-semibold tracking-[-0.05em]">
                       {leader?.agentName || '--'}
                     </p>
                     <div className="mt-3 flex items-end justify-between gap-4">
@@ -952,12 +952,12 @@ export function HomeDashboardClient({
 
           <section className="grid gap-0 border-x border-b border-black/10 xl:grid-cols-[minmax(0,1.85fr)_430px]">
             <section className="relative overflow-hidden border-0 bg-white xl:border-r xl:border-black/10">
-              <div className="flex flex-col gap-4 border-b border-black/10 px-6 py-5 md:flex-row md:items-start md:justify-between">
+              <div className="flex flex-col gap-4 border-b border-black/10 px-4 py-4 sm:px-6 sm:py-5 md:flex-row md:items-start md:justify-between">
                 <div>
                       <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-black/42">
                     {t((m) => m.homeDashboard.leaderboard)}
                   </p>
-                  <h3 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[#171717]">
+                  <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[#171717] sm:text-3xl">
                     {t((m) => m.homeDashboard.leaderboardQuestion)}
                   </h3>
                 </div>
@@ -970,16 +970,31 @@ export function HomeDashboardClient({
               </div>
 
               {leaderboardLoading ? (
-                <div className="px-6 py-6">
+                <div className="px-4 py-5 sm:px-6 sm:py-6">
                   <LoadingRows rows={8} />
                 </div>
               ) : sortedLeaderboardItems.length === 0 ? (
-                <div className="px-6 py-16 text-center text-sm text-black/55">
+                <div className="px-4 py-12 text-center text-sm text-black/55 sm:px-6 sm:py-16">
                   {t((m) => m.homeDashboard.noLeaderboard)}
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
+                  <div className="divide-y divide-black/10 md:hidden">
+                    {sortedLeaderboardItems.map((agent) => (
+                      <MobileLeaderboardCard
+                        key={agent.agentId}
+                        agent={agent}
+                        isHighlighted={highlightedAgentId === agent.agentId}
+                        localeTag={localeTag}
+                        onOpenDetails={() => {
+                          void handleOpenAgentPanel(agent.agentId);
+                        }}
+                        onSelect={() => setHighlightedAgentId(agent.agentId)}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="hidden overflow-x-auto md:block">
                     <table className="w-full min-w-[920px] table-fixed border-separate border-spacing-0">
                       <thead>
                         <tr className="bg-[#fafafa]">
@@ -1141,13 +1156,13 @@ export function HomeDashboardClient({
 
             <div className="border-t border-black/10 xl:border-t-0 xl:border-l">
               <section className="relative overflow-hidden border-0 bg-white">
-                <div className="border-b border-black/10 px-6 py-5">
+                <div className="border-b border-black/10 px-4 py-4 sm:px-6 sm:py-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-black/42">
                         {t((m) => m.homeDashboard.liveActivity)}
                       </p>
-                      <h3 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[#171717]">
+                      <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-[#171717] sm:text-3xl">
                         {t((m) => m.homeDashboard.realtimeTradeFeed)}
                       </h3>
                     </div>
@@ -1177,29 +1192,29 @@ export function HomeDashboardClient({
                 </div>
 
                 {tradesLoading ? (
-                  <div className="px-6 py-6">
+                  <div className="px-4 py-5 sm:px-6 sm:py-6">
                     <LoadingRows rows={5} />
                   </div>
                 ) : visibleTrades.length === 0 ? (
-                  <div className="px-6 py-16 text-center text-sm text-black/55">
+                  <div className="px-4 py-12 text-center text-sm text-black/55 sm:px-6 sm:py-16">
                     {t((m) => m.homeDashboard.noTradesYet)}
                   </div>
                 ) : (
                   <div className="flex flex-1 flex-col divide-y divide-black/10">
                     {visibleTrades.map((trade) => (
-                      <article
-                        key={`${trade.id}-${latestTradeId ?? 'base'}`}
-                        className={cn(
-                          'flex flex-1 flex-col justify-center px-6 py-5',
-                          trade.id === latestTradeId
-                            ? 'animate-[feed-enter_420ms_cubic-bezier(0.2,1,0.3,1)]'
-                            : latestTradeId
+                        <article
+                          key={`${trade.id}-${latestTradeId ?? 'base'}`}
+                          className={cn(
+                            'flex flex-1 flex-col justify-center px-4 py-4 sm:px-6 sm:py-5',
+                            trade.id === latestTradeId
+                              ? 'animate-[feed-enter_420ms_cubic-bezier(0.2,1,0.3,1)]'
+                              : latestTradeId
                               ? 'animate-[feed-shift_320ms_ease-out]'
                               : ''
                         )}
                       >
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-baseline gap-1 text-base font-semibold tracking-[-0.03em] text-[#171717] md:text-lg">
+                        <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                          <div className="flex min-w-0 items-baseline gap-1 text-[15px] font-semibold tracking-[-0.03em] text-[#171717] sm:text-base md:text-lg">
                             {trade.rankSnapshot ? (
                               <span className="font-mono text-[12px] text-black/42">
                                 #{trade.rankSnapshot}{' '}
@@ -1212,12 +1227,12 @@ export function HomeDashboardClient({
                               {trade.agentName}
                             </Link>
                           </div>
-                          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-black/38">
+                          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-black/38 sm:text-right">
                             {formatTime(trade.executedAt, localeTag)}
                           </p>
                         </div>
 
-                        <div className="mt-3 grid grid-cols-[auto_auto_1fr] items-center gap-x-6 gap-y-2 text-[15px] font-semibold tracking-[-0.01em] text-[#171717] sm:gap-x-8">
+                        <div className="mt-3 grid grid-cols-1 gap-y-1 text-[14px] font-semibold tracking-[-0.01em] text-[#171717] sm:grid-cols-[auto_auto_1fr] sm:items-center sm:gap-x-8 sm:gap-y-2 sm:text-[15px]">
                           <span className={cn('lowercase', getTradeTone(trade.side))}>
                             {formatTradeSideLabel(trade.side, t, 'lower')}
                           </span>
@@ -1234,7 +1249,7 @@ export function HomeDashboardClient({
                           </span>
                         </div>
 
-                        <p className="mt-3 border-l border-black/12 pl-4 text-sm leading-7 text-black/58">
+                        <p className="mt-3 border-l border-black/12 pl-4 text-sm leading-6 text-black/58 sm:leading-7">
                           {trade.displayRationale || trade.reasonTag || t((m) => m.homeDashboard.marketMove)}
                         </p>
                       </article>
@@ -1247,7 +1262,7 @@ export function HomeDashboardClient({
 
           <section className="grid gap-0 border-x border-b border-black/10 xl:grid-cols-[minmax(0,1.2fr)_minmax(420px,0.8fr)]">
             <section className="border-0 bg-white xl:border-r xl:border-black/10">
-              <div className="border-b border-black/10 px-6 py-5">
+              <div className="border-b border-black/10 px-4 py-4 sm:px-6 sm:py-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <div className="flex items-start justify-between gap-4">
@@ -1263,16 +1278,16 @@ export function HomeDashboardClient({
                         />
                       ) : null}
                     </div>
-                    <h3 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-[#171717]">
+                    <h3 className="mt-2 break-words text-2xl font-semibold tracking-[-0.05em] text-[#171717] sm:text-3xl">
                       {leader?.agentName || t((m) => m.homeTopAgent.waitingForLeader)}
                     </h3>
-                    <p className="mt-3 max-w-3xl text-sm leading-7 text-black/58">
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-black/58 sm:leading-7">
                       {topAgentSummary?.dailySummary?.summary ||
                         t((m) => m.homeTopAgent.fallbackSummary)}
                     </p>
                   </div>
 
-                  <div className="grid gap-0 border border-black/10 bg-[#fafafa] sm:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-px border border-black/10 bg-black/10 sm:grid-cols-4">
                     {[
                       {
                         label: t((m) => m.homeTopAgent.returnLabel),
@@ -1292,20 +1307,15 @@ export function HomeDashboardClient({
                           ? formatMarketName(topAgentSummary.agent.primaryMarket, t)
                           : '--',
                       },
-                    ].map((item, index) => (
+                    ].map((item) => (
                       <div
                         key={item.label}
-                        className={cn(
-                          'px-4 py-4',
-                          index < 3
-                            ? 'border-b border-black/10 sm:border-r sm:border-b-0'
-                            : ''
-                        )}
+                        className={cn('min-w-0 bg-[#fafafa] px-4 py-4')}
                       >
                         <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-black/38">
                           {item.label}
                         </p>
-                        <p className="mt-2 text-sm font-semibold text-[#171717]">
+                        <p className="mt-2 break-words text-sm font-semibold text-[#171717]">
                           {item.value}
                         </p>
                       </div>
@@ -1314,7 +1324,7 @@ export function HomeDashboardClient({
                 </div>
               </div>
 
-              <div className="px-6 py-5">
+              <div className="px-4 py-4 sm:px-6 sm:py-5">
                 <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/38">
                   {t((m) => m.homeTopAgent.topPositions)}
                 </p>
@@ -1324,12 +1334,12 @@ export function HomeDashboardClient({
                     <LoadingRows rows={5} />
                   </div>
                 ) : topVisiblePositions.length === 0 ? (
-                  <div className="mt-4 border border-black/10 bg-white px-5 py-10 text-sm text-black/55">
+                  <div className="mt-4 border border-black/10 bg-white px-4 py-8 text-sm text-black/55 sm:px-5 sm:py-10">
                     {t((m) => m.homeTopAgent.noVisiblePositions)}
                   </div>
                 ) : (
-                  <div className="mt-4 divide-y divide-black/10 border border-black/10 bg-white">
-                    <div className="grid gap-3 border-b border-black/10 bg-[#fafafa] px-5 py-3 md:grid-cols-[1.25fr_110px_110px_90px_88px]">
+                  <div className="mt-4 border border-black/10 bg-white">
+                    <div className="hidden gap-3 border-b border-black/10 bg-[#fafafa] px-5 py-3 md:grid md:grid-cols-[1.25fr_110px_110px_90px_88px]">
                       <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-black/38">
                         {t((m) => m.homeTopAgent.symbol)}
                       </p>
@@ -1347,54 +1357,60 @@ export function HomeDashboardClient({
                       </p>
                     </div>
 
-                    {topVisiblePositions.map((position) => {
-                      const grossValue = topAgentSummary?.positionsOverview.grossMarketValue || 0;
-                      const weight =
-                        grossValue > 0 && position.marketValue != null
-                          ? (position.marketValue / grossValue) * 100
-                          : null;
+                    <div className="divide-y divide-black/10">
+                      {topVisiblePositions.map((position) => {
+                        const grossValue = topAgentSummary?.positionsOverview.grossMarketValue || 0;
+                        const weight =
+                          grossValue > 0 && position.marketValue != null
+                            ? (position.marketValue / grossValue) * 100
+                            : null;
 
-                      return (
-                        <div
-                          key={position.id}
-                          className="grid gap-3 px-5 py-4 md:grid-cols-[1.25fr_110px_110px_90px_88px]"
-                        >
-                          <div>
-                            <p className="text-sm font-semibold text-[#171717]">
-                              {position.symbol}
-                            </p>
-                            <p className="mt-1 text-sm leading-6 text-black/56">
-                              {position.outcomeName || t((m) => m.homeTopAgent.publicMarkedPosition)}
-                            </p>
+                        return (
+                          <div key={position.id} className="min-w-0">
+                            <MobileTopPositionCard
+                              grossValue={grossValue}
+                              localeTag={localeTag}
+                              position={position}
+                            />
+                            <div className="hidden gap-3 px-5 py-4 md:grid md:grid-cols-[1.25fr_110px_110px_90px_88px]">
+                              <div>
+                                <p className="text-sm font-semibold text-[#171717]">
+                                  {position.symbol}
+                                </p>
+                                <p className="mt-1 text-sm leading-6 text-black/56">
+                                  {position.outcomeName || t((m) => m.homeTopAgent.publicMarkedPosition)}
+                                </p>
+                              </div>
+                              <p className="text-sm font-semibold text-[#171717]">
+                                {formatMarketName(position.market, t)}
+                              </p>
+                              <p className="text-right text-sm font-semibold text-[#171717]">
+                                {formatCompactUsd(position.marketValue, localeTag)}
+                              </p>
+                              <p
+                                className={cn(
+                                  'text-right text-sm font-semibold',
+                                  (position.unrealizedPnl ?? 0) >= 0
+                                    ? 'text-emerald-600'
+                                    : 'text-red-600'
+                                )}
+                              >
+                                {formatCompactUsd(position.unrealizedPnl, localeTag)}
+                              </p>
+                              <p className="text-right text-sm font-semibold text-[#171717]">
+                                {formatWeight(weight, localeTag)}
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-sm font-semibold text-[#171717]">
-                            {formatMarketName(position.market, t)}
-                          </p>
-                          <p className="text-right text-sm font-semibold text-[#171717]">
-                            {formatCompactUsd(position.marketValue, localeTag)}
-                          </p>
-                          <p
-                            className={cn(
-                              'text-right text-sm font-semibold',
-                              (position.unrealizedPnl ?? 0) >= 0
-                                ? 'text-emerald-600'
-                                : 'text-red-600'
-                            )}
-                          >
-                            {formatCompactUsd(position.unrealizedPnl, localeTag)}
-                          </p>
-                          <p className="text-right text-sm font-semibold text-[#171717]">
-                            {formatWeight(weight, localeTag)}
-                          </p>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
             </section>
 
-            <div className="grid gap-4 bg-[#f8f8f6] p-4">
+            <div className="grid gap-4 bg-[#f8f8f6] p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-1">
               {snapshotCards.map((card) => (
                 <SnapshotCard key={card.title} card={card} />
               ))}
@@ -1412,7 +1428,7 @@ export function HomeDashboardClient({
             type="button"
           />
           <div className="absolute inset-y-0 right-0 w-full max-w-[560px] overflow-y-auto border-l border-black/10 bg-[#f6f6f3] shadow-[-10px_0_40px_rgba(0,0,0,0.08)]">
-            <div className="sticky top-0 z-10 border-b border-black/10 bg-[#f6f6f3]/95 px-6 py-5 backdrop-blur-sm">
+            <div className="sticky top-0 z-10 border-b border-black/10 bg-[#f6f6f3]/95 px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/42">
@@ -1452,7 +1468,7 @@ export function HomeDashboardClient({
                       </div>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm text-black/56">
+                  <p className="mt-3 text-sm leading-6 text-black/56 sm:leading-7">
                     {agentPanelSummary?.agent.description ||
                       t((m) => m.homeDashboard.panelDescriptionFallback)}
                   </p>
@@ -1468,7 +1484,7 @@ export function HomeDashboardClient({
               </div>
             </div>
 
-            <div className="space-y-6 px-6 py-6">
+            <div className="space-y-5 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
               {agentPanelLoading ? (
                 <LoadingRows rows={6} />
               ) : !agentPanelSummary ? (
@@ -1653,6 +1669,148 @@ function LoadingRows({ rows = 5 }: { rows?: number }) {
   );
 }
 
+function MobileLeaderboardCard({
+  agent,
+  isHighlighted,
+  localeTag,
+  onSelect,
+  onOpenDetails,
+}: {
+  agent: LeaderboardEntry;
+  isHighlighted: boolean;
+  localeTag: string;
+  onSelect: () => void;
+  onOpenDetails: () => void;
+}) {
+  const { t } = useSiteLocale();
+
+  return (
+    <article
+      className={cn(
+        'px-4 py-4 transition sm:px-5',
+        isHighlighted ? 'bg-[#f7f7f7]' : 'bg-white'
+      )}
+      onClick={onSelect}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="shrink-0">
+            <p className="text-[1.5rem] font-semibold tracking-[-0.05em] text-[#171717]">
+              {agent.rank}
+            </p>
+            <MovementIndicator value={agent.rankChange24h} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+              <Link
+                href={`/agents/${agent.agentId}`}
+                className="min-w-0 truncate text-base font-semibold text-[#171717] underline-offset-4 transition hover:text-black/72 hover:underline"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {agent.agentName}
+              </Link>
+              <RankMedal className="shrink-0 self-center" rank={agent.rank} />
+            </div>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-black/46">
+              {formatModelName(agent.modelName, t)}
+            </p>
+          </div>
+        </div>
+
+        <InfoButton compact subject={agent.agentName} onClick={onOpenDetails} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <CompactMetric
+          label={t((m) => m.homeDashboard.returnLabel)}
+          value={formatPercent(agent.returnRate, localeTag)}
+        />
+        <CompactMetric
+          label="24h"
+          value={formatPercent(agent.change24h, localeTag)}
+        />
+        <CompactMetric
+          label={t((m) => m.homeDashboard.value)}
+          value={formatCompactUsd(agent.equityValue, localeTag)}
+        />
+        <CompactMetric
+          label={t((m) => m.homeDashboard.maxDd)}
+          value={formatPercent(agent.drawdown, localeTag)}
+        />
+      </div>
+    </article>
+  );
+}
+
+function MobileTopPositionCard({
+  position,
+  grossValue,
+  localeTag,
+}: {
+  position: PublicPosition;
+  grossValue: number;
+  localeTag: string;
+}) {
+  const { t } = useSiteLocale();
+  const weight =
+    grossValue > 0 && position.marketValue != null
+      ? (position.marketValue / grossValue) * 100
+      : null;
+
+  return (
+    <div className="px-4 py-4 md:hidden">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#171717]">{position.symbol}</p>
+          <p className="mt-1 text-sm leading-6 text-black/56">
+            {position.outcomeName || t((m) => m.homeTopAgent.publicMarkedPosition)}
+          </p>
+        </div>
+        <StatusPill>{formatMarketName(position.market, t)}</StatusPill>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <CompactMetric
+          label={t((m) => m.homeTopAgent.value)}
+          value={formatCompactUsd(position.marketValue, localeTag)}
+        />
+        <CompactMetric
+          label={t((m) => m.homeTopAgent.weight)}
+          value={formatWeight(weight, localeTag)}
+        />
+        <CompactMetric
+          label={t((m) => m.homeTopAgent.pnl)}
+          value={formatCompactUsd(position.unrealizedPnl, localeTag)}
+          valueClassName={
+            (position.unrealizedPnl ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function CompactMetric({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="border border-black/10 bg-[#fafafa] px-3 py-3">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-black/38">
+        {label}
+      </p>
+      <p className={cn('mt-2 text-sm font-semibold text-[#171717]', valueClassName)}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function InfoButton({
   subject,
   onClick,
@@ -1696,7 +1854,7 @@ function PaginationControl({
   const { t } = useSiteLocale();
 
   return (
-    <div className="flex items-center justify-end gap-3 border-t border-black/10 px-5 py-4">
+    <div className="flex flex-col gap-3 border-t border-black/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-5">
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-black/42">
         {t((m) => m.homeDashboard.pageLabel)
           .replace('{current}', String(totalPages === 0 ? 0 : currentPage))
@@ -1806,14 +1964,14 @@ function SnapshotCard({ card }: { card: SnapshotCardData }) {
   const metaItems = card.meta.filter((item): item is string => Boolean(item && item !== '--'));
 
   return (
-    <div className="border border-black/10 bg-white p-5 shadow-[0_1px_0_rgba(0,0,0,0.03)]">
+    <div className="border border-black/10 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] sm:p-5">
       <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-black/42">
         {card.title}
       </p>
-      <p className="mt-4 text-2xl font-semibold tracking-[-0.05em] text-[#171717]">
+      <p className="mt-4 text-xl font-semibold tracking-[-0.05em] text-[#171717] sm:text-2xl">
         {card.metric}
       </p>
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-black/10 pt-4">
+      <div className="mt-4 flex flex-col items-start gap-2 border-t border-black/10 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <p className="text-sm font-semibold text-[#171717]">{card.agent}</p>
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-black/42">
           {card.symbol}
