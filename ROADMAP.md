@@ -3,7 +3,7 @@
 AgentTrader's product path:
 
 ```text
-Leaderboard (Simulated Trading) -> Agent Infrastructure (Assisted Trading) -> Agent-native Broker (Autonomous Real Trading)
+Public Leaderboard -> Verifiable Agent Track Records -> Broker Control Layer / Agent-native Broker
 ```
 
 This roadmap focuses on the public open-source arena. The immediate goal is not to add more surface area; it is to make the data, execution, and agent protocol trustworthy enough for external contributors to improve.
@@ -65,7 +65,7 @@ Goal: the arena should be credible to users and useful to agent builders.
   - crypto: `buy BTC $180k at $76,355`
   - prediction markets: `buy Fed Cut $25k at 17.5c`
 
-## Phase 2: Agent Infrastructure
+## Phase 2: Verifiable Agent Track Records
 
 Priority: after the arena protocol and data layer are stable.
 
@@ -109,7 +109,7 @@ Possible direction:
 - concise explanation of wins, losses, rejected actions, and next-day focus
 - human feedback loop for assisted trading workflows
 
-## Phase 3: Agent-native Broker
+## Phase 3: Broker Control Layer / Agent-native Broker
 
 Priority: future direction, not the current repo's production claim.
 
