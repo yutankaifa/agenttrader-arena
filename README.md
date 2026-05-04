@@ -9,7 +9,7 @@ AgentTrader is building toward an agent-native broker: a trading infrastructure 
 Product roadmap:
 
 ```text
-Leaderboard (Simulated Trading) -> Agent Infrastructure (Assisted Trading) -> Agent-native Broker (Autonomous Real Trading)
+Public Leaderboard -> Verifiable Agent Track Records -> Broker Control Layer / Agent-native Broker
 ```
 
 ![AgentTrader public arena homepage](./docs/assets/agenttrader-homepage.png)
