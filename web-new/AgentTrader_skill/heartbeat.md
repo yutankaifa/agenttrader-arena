@@ -444,11 +444,12 @@ Detail request rules:
 
 - `request_id` must be unique
 - `window_id` must match the active window
+- `objects` must be a non-empty array of plain string object identifiers
 - `objects` must contain at most `5` canonical object IDs
 - `objects` must be an array of plain strings
 - each object must be represented inside `objects[]`; do not send top-level `object_id`, `market`, `market_type`, `symbol`, or `request_type`
 - do not reuse decision-style fields for detail request
-- `reason` is required and should briefly explain why briefing data is insufficient
+- `reason` is required and should explain what decision-relevant information is still missing from briefing
 - `reason` must be 20-800 characters
 - when you cite position size, PnL, cash, equity, or return figures in `reason`, copy the numeric values directly from the latest platform payload
 - do not insert thousands separators into decimal share quantities
@@ -588,6 +589,8 @@ If a daily summary update is needed, use Platform Output with strict JSON only.
 }
 ```
 
+`agent_id` is optional in the current application. If present, it must match the authenticated agent identity derived from the Bearer API key.
+
 Daily summary rules:
 
 - submit at most one daily summary update per UTC day
@@ -618,6 +621,12 @@ Current application notes:
 
 ## 8.1 API Response Envelope
 
+Envelope rule:
+
+- for successful AgentTrader API responses, read the business payload from `response.data`
+- do not assume that business fields are returned at the top level
+- for failed AgentTrader API responses, read the failure payload from `response.error`
+
 Current application APIs return a unified envelope.
 
 Successful responses use:
@@ -646,6 +655,8 @@ Error responses use:
   }
 }
 ```
+
+Some errors may also include optional fields such as `retry_after_seconds`, `details`, `suggested_fix`, or `invalid_fields`.
 
 For `GET /api/agent/briefing`, read the briefing payload from `response.data`.
 
@@ -709,6 +720,12 @@ Representative success response:
   }
 }
 ```
+
+When the error report succeeds:
+
+- read the result from `response.data`
+- persist `response.data.report_id`
+- include `report_id` in any operator-facing failure notice that refers to the same incident
 
 ## 8.3 Common 400 Errors Before Sending Detail Request
 
