@@ -1661,6 +1661,72 @@ await runTest('handleAgentDecisionPost returns agentSuccess for accepted decisio
   });
 });
 
+await runTest(
+  'handleAgentDecisionPost writes one protocol event with wrapped success response body',
+  async () => {
+    let capturedEvent: Record<string, unknown> | null = null;
+
+    const response = await handleAgentDecisionPost(
+      new Request('https://example.com/api/agent/decisions', {
+        method: 'POST',
+        body: JSON.stringify({
+          decision_id: 'decision_2',
+          window_id: '2026-04-30T12:30',
+        }),
+      }),
+      {
+        requireDatabaseModeApi: () => null,
+        requireClaimedActiveAgent: async () => ({
+          ok: true,
+          state: {
+            agentId: 'agent_123',
+          },
+        }),
+        submitDecision: async () => ({
+          ok: true,
+          data: {
+            decision_id: 'decision_2',
+            window_id: '2026-04-30T12:30',
+          },
+        }),
+        agentError: agentErrorResponse,
+        agentSuccess: wrappedAgentSuccessResponse,
+        writeProtocolEvent: async (input: Record<string, unknown>) => {
+          capturedEvent = input as unknown as Record<string, unknown>;
+        },
+      }
+    );
+
+    assert.deepEqual(await readJson(response), {
+      ok: true,
+      data: {
+        decision_id: 'decision_2',
+        window_id: '2026-04-30T12:30',
+      },
+    });
+    assert.deepEqual(capturedEvent, {
+      agentId: 'agent_123',
+      endpointKey: 'decision',
+      httpMethod: 'POST',
+      decisionId: 'decision_2',
+      briefingWindowId: '2026-04-30T12:30',
+      statusCode: 200,
+      requestSuccess: true,
+      requestPayload: {
+        decision_id: 'decision_2',
+        window_id: '2026-04-30T12:30',
+      },
+      responsePayload: {
+        ok: true,
+        data: {
+          decision_id: 'decision_2',
+          window_id: '2026-04-30T12:30',
+        },
+      },
+    });
+  }
+);
+
 await runTest('handleAgentDecisionPost maps unexpected errors to INTERNAL_ERROR', async () => {
   let errorCall: {
     code: string;
@@ -1882,6 +1948,72 @@ await runTest('handleAgentDetailRequestPost returns agentSuccess for accepted de
     },
   });
 });
+
+await runTest(
+  'handleAgentDetailRequestPost writes one protocol event with wrapped error response body',
+  async () => {
+    let capturedEvent: Record<string, unknown> | null = null;
+
+    const response = await handleAgentDetailRequestPost(
+      new Request('https://example.com/api/agent/detail-request', {
+        method: 'POST',
+        body: JSON.stringify({
+          request_id: 'request_7',
+          window_id: '2026-04-30T12:45',
+        }),
+      }),
+      {
+        requireDatabaseModeApi: () => null,
+        authenticateAgentRequest: async () => ({
+          ok: true,
+          agentId: 'agent_123',
+        }),
+        submitDetailRequest: async () => ({
+          ok: false,
+          code: 'RATE_LIMIT',
+          message: 'Only one detail request is allowed',
+          status: 429,
+          details: {
+            retry_hint: 'next window',
+          },
+        }),
+        agentError: agentErrorResponse,
+        agentSuccess: agentSuccessResponse,
+        writeProtocolEvent: async (input: Record<string, unknown>) => {
+          capturedEvent = input as unknown as Record<string, unknown>;
+        },
+      }
+    );
+
+    assert.deepEqual(await readJson(response), {
+      code: 'RATE_LIMIT',
+      message: 'Only one detail request is allowed',
+      details: {
+        retry_hint: 'next window',
+      },
+    });
+    assert.deepEqual(capturedEvent, {
+      agentId: 'agent_123',
+      endpointKey: 'detail_request',
+      httpMethod: 'POST',
+      requestId: 'request_7',
+      briefingWindowId: '2026-04-30T12:45',
+      statusCode: 429,
+      requestSuccess: false,
+      requestPayload: {
+        request_id: 'request_7',
+        window_id: '2026-04-30T12:45',
+      },
+      responsePayload: {
+        code: 'RATE_LIMIT',
+        message: 'Only one detail request is allowed',
+        details: {
+          retry_hint: 'next window',
+        },
+      },
+    });
+  }
+);
 
 await runTest('handleAgentDetailRequestPost maps unexpected errors to INTERNAL_ERROR', async () => {
   let errorCall: {

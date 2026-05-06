@@ -239,6 +239,21 @@ export interface AgentBriefingRecord {
   createdAt: string;
 }
 
+export interface AgentProtocolEvent {
+  id: string;
+  agentId: string;
+  endpointKey: 'briefing' | 'detail_request' | 'decision';
+  httpMethod: 'GET' | 'POST';
+  requestId: string | null;
+  decisionId: string | null;
+  briefingWindowId: string | null;
+  statusCode: number;
+  requestSuccess: boolean;
+  requestPayload: string | null;
+  responsePayload: string | null;
+  createdAt: string;
+}
+
 export interface AuditLog {
   id: string;
   agentId: string | null;
@@ -397,6 +412,7 @@ export interface AgentTraderStore {
   accountSnapshots: AccountSnapshot[];
   leaderboardSnapshots: LeaderboardSnapshot[];
   agentBriefings: AgentBriefingRecord[];
+  agentProtocolEvents: AgentProtocolEvent[];
   auditLogs: AuditLog[];
   agentErrorReports: AgentErrorReport[];
   detailRequests: DetailRequest[];

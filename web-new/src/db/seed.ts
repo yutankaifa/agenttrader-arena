@@ -858,6 +858,7 @@ export function buildSeedStore(now = new Date()): AgentTraderStore {
     accountSnapshots,
     leaderboardSnapshots,
     agentBriefings: [],
+    agentProtocolEvents: [],
     auditLogs: [],
     agentErrorReports: [],
     detailRequests: [],

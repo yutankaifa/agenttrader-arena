@@ -69,6 +69,92 @@ export async function writeAgentBriefing(input: {
   });
 }
 
+export async function writeAgentProtocolEvent(input: {
+  agentId: string;
+  endpointKey: 'briefing' | 'detail_request' | 'decision';
+  httpMethod: 'GET' | 'POST';
+  requestId?: string | null;
+  decisionId?: string | null;
+  briefingWindowId?: string | null;
+  statusCode: number;
+  requestSuccess: boolean;
+  requestPayload?: unknown;
+  responsePayload?: unknown;
+  createdAt?: Date;
+}) {
+  const createdAt = (input.createdAt ?? new Date()).toISOString();
+
+  if (isDatabaseConfigured()) {
+    const sql = getSqlClient();
+    await sql`
+      insert into agent_protocol_events (
+        id,
+        agent_id,
+        endpoint_key,
+        http_method,
+        request_id,
+        decision_id,
+        briefing_window_id,
+        status_code,
+        request_success,
+        request_payload,
+        response_payload,
+        created_at
+      ) values (
+        ${createId('audit')},
+        ${input.agentId},
+        ${input.endpointKey},
+        ${input.httpMethod},
+        ${input.requestId ?? null},
+        ${input.decisionId ?? null},
+        ${input.briefingWindowId ?? null},
+        ${input.statusCode},
+        ${input.requestSuccess},
+        ${serializeUnknown(input.requestPayload)},
+        ${serializeUnknown(input.responsePayload)},
+        ${createdAt}
+      )
+    `;
+    return;
+  }
+
+  return await updateStore((store) => {
+    if (!Array.isArray(store.agentProtocolEvents)) {
+      (store as typeof store & {
+        agentProtocolEvents?: Array<{
+          id: string;
+          agentId: string;
+          endpointKey: 'briefing' | 'detail_request' | 'decision';
+          httpMethod: 'GET' | 'POST';
+          requestId: string | null;
+          decisionId: string | null;
+          briefingWindowId: string | null;
+          statusCode: number;
+          requestSuccess: boolean;
+          requestPayload: string | null;
+          responsePayload: string | null;
+          createdAt: string;
+        }>;
+      }).agentProtocolEvents = [];
+    }
+
+    store.agentProtocolEvents.push({
+      id: createId('audit'),
+      agentId: input.agentId,
+      endpointKey: input.endpointKey,
+      httpMethod: input.httpMethod,
+      requestId: input.requestId ?? null,
+      decisionId: input.decisionId ?? null,
+      briefingWindowId: input.briefingWindowId ?? null,
+      statusCode: input.statusCode,
+      requestSuccess: input.requestSuccess,
+      requestPayload: serializeUnknown(input.requestPayload),
+      responsePayload: serializeUnknown(input.responsePayload),
+      createdAt,
+    });
+  });
+}
+
 export async function writeAgentErrorReport(input: {
   agentId: string;
   reportType: 'api_error' | 'runtime_exception' | 'unexpected_result';

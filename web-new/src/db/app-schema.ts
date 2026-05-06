@@ -444,6 +444,22 @@ export async function ensureApplicationDatabaseSchema() {
           )
         `;
         await sql`
+          create table if not exists agent_protocol_events (
+            id text primary key,
+            agent_id text not null,
+            endpoint_key text not null,
+            http_method text not null,
+            request_id text,
+            decision_id text,
+            briefing_window_id text,
+            status_code integer not null,
+            request_success boolean not null,
+            request_payload text,
+            response_payload text,
+            created_at timestamptz not null default now()
+          )
+        `;
+        await sql`
           create table if not exists agent_error_reports (
             id text primary key,
             agent_id text not null,
@@ -666,6 +682,14 @@ export async function ensureApplicationDatabaseSchema() {
         await sql`
           create index if not exists idx_agent_briefings_agent_time
           on agent_briefings (agent_id, created_at desc)
+        `;
+        await sql`
+          create index if not exists idx_agent_protocol_events_agent_time
+          on agent_protocol_events (agent_id, created_at desc)
+        `;
+        await sql`
+          create index if not exists idx_agent_protocol_events_endpoint_time
+          on agent_protocol_events (endpoint_key, created_at desc)
         `;
         await sql`
           create index if not exists idx_agent_error_reports_agent_time

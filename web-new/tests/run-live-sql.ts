@@ -810,6 +810,10 @@ async function cleanupScenario(sql: Sql, input: {
     where agent_id = ${input.agentId}
   `;
   await sql`
+    delete from agent_protocol_events
+    where agent_id = ${input.agentId}
+  `;
+  await sql`
     delete from account_snapshots
     where agent_id = ${input.agentId}
   `;
@@ -953,6 +957,25 @@ async function main() {
         assert.equal(detailRows[0].request_id, `req_${token}`);
         assert.equal(detailRows[0].briefing_window_id, windowId);
         assert.match(detailRows[0].response_summary, new RegExp(symbol));
+
+        const protocolRows = await sql<
+          {
+            endpoint_key: string;
+            request_payload: string | null;
+            response_payload: string | null;
+            request_success: boolean;
+          }[]
+        >`
+          select endpoint_key, request_payload, response_payload, request_success
+          from agent_protocol_events
+          where agent_id = ${agentId}
+          order by created_at asc
+        `;
+        assert.equal(protocolRows.length, 1);
+        assert.equal(protocolRows[0].endpoint_key, 'detail_request');
+        assert.equal(protocolRows[0].request_success, true);
+        assert.match(protocolRows[0].request_payload ?? '', new RegExp(`req_${token}`));
+        assert.match(protocolRows[0].response_payload ?? '', new RegExp(symbol));
 
         const limited = await submitDetailRequest(agentId, {
           type: 'detail_request',
@@ -1110,6 +1133,25 @@ async function main() {
           where agent_id = ${agentId}
         `;
         assert.equal(Number(liveTradeRows[0]?.total ?? 0), 1);
+
+        const protocolRows = await sql<
+          {
+            endpoint_key: string;
+            decision_id: string | null;
+            request_payload: string | null;
+            response_payload: string | null;
+          }[]
+        >`
+          select endpoint_key, decision_id, request_payload, response_payload
+          from agent_protocol_events
+          where agent_id = ${agentId}
+          order by created_at asc
+        `;
+        assert.equal(protocolRows.length, 1);
+        assert.equal(protocolRows[0].endpoint_key, 'decision');
+        assert.equal(protocolRows[0].decision_id, `dec_${token}`);
+        assert.match(protocolRows[0].request_payload ?? '', new RegExp(`dec_${token}`));
+        assert.match(protocolRows[0].response_payload ?? '', /executed/);
 
         const duplicate = await submitDecision(agentId, {
           type: 'decision',
@@ -1364,6 +1406,57 @@ async function main() {
           where agent_id = ${agentId}
         `;
         assert.equal(Number(briefingRows[0]?.total ?? 0), 1);
+
+        const protocolRows = await sql<
+          {
+            endpoint_key: string;
+            http_method: string;
+            request_payload: string | null;
+            response_payload: string | null;
+            request_success: boolean;
+          }[]
+        >`
+          select endpoint_key, http_method, request_payload, response_payload, request_success
+          from agent_protocol_events
+          where agent_id = ${agentId}
+          order by created_at asc
+        `;
+        assert.equal(protocolRows.length, 3);
+        const protocolByEndpoint = new Map<
+          string,
+          {
+            endpoint_key: string;
+            http_method: string;
+            request_payload: string | null;
+            response_payload: string | null;
+            request_success: boolean;
+          }
+        >(
+          protocolRows.map(
+            (row: {
+              endpoint_key: string;
+              http_method: string;
+              request_payload: string | null;
+              response_payload: string | null;
+              request_success: boolean;
+            }) => [row.endpoint_key, row] as const
+          )
+        );
+        assert.equal(protocolByEndpoint.has('briefing'), true);
+        assert.equal(protocolByEndpoint.has('detail_request'), true);
+        assert.equal(protocolByEndpoint.has('decision'), true);
+        assert.equal(protocolByEndpoint.get('briefing')?.http_method, 'GET');
+        assert.equal(protocolByEndpoint.get('briefing')?.request_success, true);
+        assert.equal(protocolByEndpoint.get('briefing')?.request_payload, null);
+        assert.match(protocolByEndpoint.get('briefing')?.response_payload ?? '', /success/);
+        assert.match(
+          protocolByEndpoint.get('detail_request')?.request_payload ?? '',
+          new RegExp(`req_${token}`)
+        );
+        assert.match(
+          protocolByEndpoint.get('decision')?.request_payload ?? '',
+          new RegExp(`dec_${token}`)
+        );
 
         const detailRows = await sql<
           {

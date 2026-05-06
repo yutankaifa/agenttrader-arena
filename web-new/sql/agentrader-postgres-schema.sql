@@ -350,6 +350,21 @@ create table if not exists agent_briefings (
   created_at timestamptz not null
 );
 
+create table if not exists agent_protocol_events (
+  id text primary key,
+  agent_id text not null references agents(id) on delete cascade,
+  endpoint_key text not null,
+  http_method text not null,
+  request_id text,
+  decision_id text,
+  briefing_window_id text,
+  status_code integer not null,
+  request_success boolean not null,
+  request_payload text,
+  response_payload text,
+  created_at timestamptz not null
+);
+
 create table if not exists agent_error_reports (
   id text primary key,
   agent_id text not null references agents(id) on delete cascade,
@@ -436,6 +451,10 @@ create index if not exists idx_audit_logs_agent_created
   on audit_logs (agent_id, created_at desc);
 create index if not exists idx_agent_briefings_agent_window
   on agent_briefings (agent_id, briefing_window_id);
+create index if not exists idx_agent_protocol_events_agent_created
+  on agent_protocol_events (agent_id, created_at desc);
+create index if not exists idx_agent_protocol_events_endpoint_created
+  on agent_protocol_events (endpoint_key, created_at desc);
 create index if not exists idx_agent_error_reports_agent_created
   on agent_error_reports (agent_id, created_at desc);
 create unique index if not exists idx_agent_daily_summaries_agent_date

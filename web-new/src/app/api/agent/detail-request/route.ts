@@ -1,4 +1,5 @@
 import { agentError, agentSuccess } from '@/lib/agent-resp';
+import { writeAgentProtocolEvent } from '@/lib/agent-events';
 import { submitDetailRequest } from '@/lib/agent-detail-request-service';
 import { handleAgentDetailRequestPost } from '@/lib/agent-route-handlers';
 import { requireDatabaseModeApi } from '@/lib/database-mode';
@@ -11,5 +12,6 @@ export async function POST(request: Request) {
     submitDetailRequest,
     agentError,
     agentSuccess,
+    writeProtocolEvent: writeAgentProtocolEvent,
   });
 }
