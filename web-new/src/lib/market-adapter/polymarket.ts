@@ -23,6 +23,8 @@ type ParsedClobBook = {
   askSize: number | null;
 };
 
+type CombinedBinaryBook = ParsedClobBook;
+
 async function gammaFetch(path: string) {
   const response = await fetch(`${GAMMA_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -317,7 +319,7 @@ function normalizeDerivedProbability(value: number | null) {
 export function combineBinaryOutcomeBooks(
   directBook: ParsedClobBook,
   complementBook: ParsedClobBook | null
-) {
+): CombinedBinaryBook {
   const syntheticBid =
     complementBook?.ask != null
       ? normalizeDerivedProbability(1 - complementBook.ask)
@@ -363,6 +365,42 @@ export function combineBinaryOutcomeBooks(
     bidSize: bestBid?.size ?? null,
     askSize: bestAsk?.size ?? null,
   };
+}
+
+function buildPolymarketDepthSnapshot(input: {
+  directBook: ParsedClobBook;
+  complementBook: ParsedClobBook | null;
+  combinedBook: CombinedBinaryBook;
+  complementOutcomeName: string | null;
+  timestamp: string;
+}) {
+  return JSON.stringify({
+    bids:
+      input.combinedBook.bid != null
+        ? [
+            {
+              price: input.combinedBook.bid,
+              size: input.combinedBook.bidSize ?? Number.MAX_SAFE_INTEGER,
+            },
+          ]
+        : [],
+    asks:
+      input.combinedBook.ask != null
+        ? [
+            {
+              price: input.combinedBook.ask,
+              size: input.combinedBook.askSize ?? Number.MAX_SAFE_INTEGER,
+            },
+          ]
+        : [],
+    snapshot_at: input.timestamp,
+    book_debug: {
+      direct: input.directBook,
+      complement: input.complementBook,
+      complement_outcome_name: input.complementOutcomeName,
+      synthetic: input.combinedBook,
+    },
+  });
 }
 
 function parseOutcomeSymbol(symbol: string) {
@@ -620,11 +658,13 @@ async function buildOutcomeQuote(
   outcome: { id: string | null; name: string; price: number | null }
 ) {
   const currentPrice = outcome.price ?? 0.5;
+  const quoteTimestamp = new Date().toISOString();
   let bid: number | null = null;
   let ask: number | null = null;
   let bidSize: number | null = null;
   let askSize: number | null = null;
   let change24h: number | null = null;
+  let depthSnapshot: string | null = null;
 
   if (outcome.id) {
     const complementOutcome = getBinaryComplementOutcome(market, outcome.id);
@@ -658,6 +698,13 @@ async function buildOutcomeQuote(
       ask = combinedBook.ask;
       bidSize = combinedBook.bidSize;
       askSize = combinedBook.askSize;
+      depthSnapshot = buildPolymarketDepthSnapshot({
+        directBook,
+        complementBook,
+        combinedBook,
+        complementOutcomeName: complementOutcome?.name ?? null,
+        timestamp: quoteTimestamp,
+      });
     }
 
     if (historyResult.status === 'fulfilled') {
@@ -676,9 +723,10 @@ async function buildOutcomeQuote(
     spread: bid != null && ask != null ? ask - bid : null,
     bidSize,
     askSize,
+    depthSnapshot,
     volume24h: market.volume_24h ?? null,
     change24h,
-    timestamp: new Date().toISOString(),
+    timestamp: quoteTimestamp,
     outcomeId: outcome.id,
     outcomeName: outcome.name,
   } satisfies MarketQuote;

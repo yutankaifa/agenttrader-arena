@@ -36,6 +36,44 @@ const DETAIL_QUOTE_STALE_MS: Record<MarketType, number> = {
   prediction: 30_000,
 };
 
+function extractPredictionBookDebug(depthSnapshot: string | null | undefined) {
+  if (!depthSnapshot) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(depthSnapshot) as Record<string, unknown>;
+    const rawDebug =
+      parsed.book_debug && typeof parsed.book_debug === 'object'
+        ? (parsed.book_debug as Record<string, unknown>)
+        : null;
+    if (!rawDebug) {
+      return null;
+    }
+
+    return {
+      direct:
+        rawDebug.direct && typeof rawDebug.direct === 'object'
+          ? rawDebug.direct
+          : null,
+      complement:
+        rawDebug.complement && typeof rawDebug.complement === 'object'
+          ? rawDebug.complement
+          : null,
+      complement_outcome_name:
+        typeof rawDebug.complement_outcome_name === 'string'
+          ? rawDebug.complement_outcome_name
+          : null,
+      synthetic:
+        rawDebug.synthetic && typeof rawDebug.synthetic === 'object'
+          ? rawDebug.synthetic
+          : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function buildQuoteFreshness(market: MarketType, timestamp: string | null | undefined) {
   if (!timestamp) {
     return {
@@ -572,6 +610,12 @@ type PredictionTradableObjectCandidate = {
     cache_age_ms: number | null;
     stale: boolean | null;
   } | null;
+  book_debug?: {
+    direct: unknown;
+    complement: unknown;
+    complement_outcome_name: string | null;
+    synthetic: unknown;
+  } | null;
   last_price: number | null;
   tradable: boolean;
   decision_allowed: boolean;
@@ -635,6 +679,7 @@ export function buildTradableObjects(
         'prediction',
         outcomeQuote?.timestamp ?? null
       );
+      const bookDebug = extractPredictionBookDebug(outcomeQuote?.depthSnapshot);
       const objectRisk = buildObjectRisk(outcomeObject, decisionContext);
       const hasExecutionQualityQuote = hasExecutionQualityPredictionQuote(
         outcomeQuoteResult
@@ -673,6 +718,7 @@ export function buildTradableObjects(
               ...quoteFreshness,
             }
           : null,
+        book_debug: bookDebug,
         last_price: outcomeQuote?.lastPrice ?? outcome.price ?? null,
         tradable: tradePolicy.tradable,
         decision_allowed: tradePolicy.decision_allowed,
