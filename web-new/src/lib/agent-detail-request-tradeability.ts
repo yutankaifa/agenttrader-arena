@@ -74,6 +74,20 @@ function extractPredictionBookDebug(depthSnapshot: string | null | undefined) {
   }
 }
 
+function getPredictionQuoteDepthSnapshot(
+  quote:
+    | (MarketQuote & { depthSnapshot?: string | null })
+    | { depthSnapshot?: string | null }
+    | null
+    | undefined
+) {
+  if (!quote || typeof quote !== 'object' || !('depthSnapshot' in quote)) {
+    return null;
+  }
+
+  return quote.depthSnapshot ?? null;
+}
+
 function buildQuoteFreshness(market: MarketType, timestamp: string | null | undefined) {
   if (!timestamp) {
     return {
@@ -679,7 +693,9 @@ export function buildTradableObjects(
         'prediction',
         outcomeQuote?.timestamp ?? null
       );
-      const bookDebug = extractPredictionBookDebug(outcomeQuote?.depthSnapshot);
+      const bookDebug = extractPredictionBookDebug(
+        getPredictionQuoteDepthSnapshot(outcomeQuote)
+      );
       const objectRisk = buildObjectRisk(outcomeObject, decisionContext);
       const hasExecutionQualityQuote = hasExecutionQualityPredictionQuote(
         outcomeQuoteResult
