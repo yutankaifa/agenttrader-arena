@@ -178,6 +178,9 @@ const {
 const { polymarketAdapter } = await import(
   new URL('../src/lib/market-adapter/index.ts', import.meta.url).href
 );
+const { combineBinaryOutcomeBooks } = await import(
+  new URL('../src/lib/market-adapter/polymarket.ts', import.meta.url).href
+);
 const {
   handleAgentDecisionPost,
   handleAgentDetailRequestPost,
@@ -1017,6 +1020,31 @@ await runTest(
     } finally {
       polymarketAdapter.getQuote = originalGetQuote;
     }
+  }
+);
+
+await runTest(
+  'combineBinaryOutcomeBooks derives a narrow synthetic book from the complementary outcome',
+  () => {
+    const result = combineBinaryOutcomeBooks(
+      {
+        bid: 0.001,
+        ask: 0.999,
+        bidSize: 10,
+        askSize: 10,
+      },
+      {
+        bid: 0.991,
+        ask: 0.992,
+        bidSize: 200,
+        askSize: 150,
+      }
+    );
+
+    assert.ok(Math.abs((result.bid ?? 0) - 0.008) < 1e-9);
+    assert.ok(Math.abs((result.ask ?? 0) - 0.009) < 1e-9);
+    assert.equal(result.bidSize, 150);
+    assert.equal(result.askSize, 200);
   }
 );
 

@@ -16,6 +16,13 @@ type PriceHistoryPoint = {
   p: number;
 };
 
+type ParsedClobBook = {
+  bid: number | null;
+  ask: number | null;
+  bidSize: number | null;
+  askSize: number | null;
+};
+
 async function gammaFetch(path: string) {
   const response = await fetch(`${GAMMA_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -237,6 +244,125 @@ function computeChange24h(history: PriceHistoryPoint[], currentPrice: number) {
   }
 
   return ((currentPrice - baseline) / baseline) * 100;
+}
+
+function parseTopLevelBookNumber(value: unknown) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function parseBookLevel(
+  level: unknown
+): { price: number | null; size: number | null } | null {
+  if (!level || typeof level !== 'object') {
+    return null;
+  }
+
+  const record = level as Record<string, unknown>;
+  return {
+    price: parseTopLevelBookNumber(record.price),
+    size: parseTopLevelBookNumber(record.size ?? record.qty),
+  };
+}
+
+function parseClobBook(payload: unknown): ParsedClobBook {
+  if (!payload || typeof payload !== 'object') {
+    return {
+      bid: null,
+      ask: null,
+      bidSize: null,
+      askSize: null,
+    };
+  }
+
+  const record = payload as Record<string, unknown>;
+  const bestBid = Array.isArray(record.bids) ? parseBookLevel(record.bids[0]) : null;
+  const bestAsk = Array.isArray(record.asks) ? parseBookLevel(record.asks[0]) : null;
+
+  return {
+    bid: bestBid?.price ?? null,
+    ask: bestAsk?.price ?? null,
+    bidSize: bestBid?.size ?? null,
+    askSize: bestAsk?.size ?? null,
+  };
+}
+
+function getBinaryComplementOutcome(
+  market: PredictionMarketDetails,
+  outcomeId: string | null | undefined
+) {
+  if (!outcomeId || market.outcomes.length !== 2) {
+    return null;
+  }
+
+  return market.outcomes.find((candidate) => candidate.id && candidate.id !== outcomeId) ?? null;
+}
+
+function normalizeDerivedProbability(value: number | null) {
+  if (value == null || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(0.001, Math.min(0.999, value));
+}
+
+export function combineBinaryOutcomeBooks(
+  directBook: ParsedClobBook,
+  complementBook: ParsedClobBook | null
+) {
+  const syntheticBid =
+    complementBook?.ask != null
+      ? normalizeDerivedProbability(1 - complementBook.ask)
+      : null;
+  const syntheticAsk =
+    complementBook?.bid != null
+      ? normalizeDerivedProbability(1 - complementBook.bid)
+      : null;
+
+  const bidCandidates = [
+    {
+      price: directBook.bid,
+      size: directBook.bidSize,
+    },
+    {
+      price: syntheticBid,
+      size: complementBook?.askSize ?? null,
+    },
+  ].filter(
+    (candidate): candidate is { price: number; size: number | null } =>
+      candidate.price != null
+  );
+  const askCandidates = [
+    {
+      price: directBook.ask,
+      size: directBook.askSize,
+    },
+    {
+      price: syntheticAsk,
+      size: complementBook?.bidSize ?? null,
+    },
+  ].filter(
+    (candidate): candidate is { price: number; size: number | null } =>
+      candidate.price != null
+  );
+
+  const bestBid = bidCandidates.sort((left, right) => right.price - left.price)[0] ?? null;
+  const bestAsk = askCandidates.sort((left, right) => left.price - right.price)[0] ?? null;
+
+  return {
+    bid: bestBid?.price ?? null,
+    ask: bestAsk?.price ?? null,
+    bidSize: bestBid?.size ?? null,
+    askSize: bestAsk?.size ?? null,
+  };
 }
 
 function parseOutcomeSymbol(symbol: string) {
@@ -496,25 +622,42 @@ async function buildOutcomeQuote(
   const currentPrice = outcome.price ?? 0.5;
   let bid: number | null = null;
   let ask: number | null = null;
+  let bidSize: number | null = null;
+  let askSize: number | null = null;
   let change24h: number | null = null;
 
   if (outcome.id) {
-    const [bookResult, historyResult] = await Promise.allSettled([
+    const complementOutcome = getBinaryComplementOutcome(market, outcome.id);
+    const [bookResult, complementBookResult, historyResult] = await Promise.allSettled([
       clobFetch(`/book?token_id=${outcome.id}`),
+      complementOutcome?.id
+        ? clobFetch(`/book?token_id=${complementOutcome.id}`)
+        : Promise.resolve(null),
       getTokenPriceHistory(outcome.id),
     ]);
 
-    if (bookResult.status === 'fulfilled') {
-      const book = bookResult.value as {
-        bids?: Array<{ price: string }>;
-        asks?: Array<{ price: string }>;
-      };
-      if (book.bids?.length) {
-        bid = Number.parseFloat(book.bids[0].price);
-      }
-      if (book.asks?.length) {
-        ask = Number.parseFloat(book.asks[0].price);
-      }
+    if (
+      bookResult.status === 'fulfilled' ||
+      complementBookResult.status === 'fulfilled'
+    ) {
+      const directBook =
+        bookResult.status === 'fulfilled'
+          ? parseClobBook(bookResult.value)
+          : {
+              bid: null,
+              ask: null,
+              bidSize: null,
+              askSize: null,
+            };
+      const complementBook =
+        complementBookResult.status === 'fulfilled'
+          ? parseClobBook(complementBookResult.value)
+          : null;
+      const combinedBook = combineBinaryOutcomeBooks(directBook, complementBook);
+      bid = combinedBook.bid;
+      ask = combinedBook.ask;
+      bidSize = combinedBook.bidSize;
+      askSize = combinedBook.askSize;
     }
 
     if (historyResult.status === 'fulfilled') {
@@ -531,8 +674,8 @@ async function buildOutcomeQuote(
     ask,
     midpoint: bid != null && ask != null ? (bid + ask) / 2 : currentPrice,
     spread: bid != null && ask != null ? ask - bid : null,
-    bidSize: null,
-    askSize: null,
+    bidSize,
+    askSize,
     volume24h: market.volume_24h ?? null,
     change24h,
     timestamp: new Date().toISOString(),
