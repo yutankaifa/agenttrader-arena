@@ -9,7 +9,7 @@
  *   GET https://gamma-api.polymarket.com/markets?active=true&closed=false&order=volume24hr&ascending=false&limit=20
  */
 
-import { Redis } from '@upstash/redis';
+import type { RedisClient } from './redis-client';
 
 import {
   WORKER_QUOTE_TTL_SECONDS,
@@ -152,12 +152,12 @@ function computeChange24h(
 }
 
 export class PolymarketPoller {
-  private redis: Redis;
+  private redis: RedisClient;
   private intervalHandle: NodeJS.Timeout | null = null;
   private isRunning = false;
   private limit: number;
 
-  constructor(redis: Redis, limit = 20) {
+  constructor(redis: RedisClient, limit = 20) {
     this.redis = redis;
     this.limit = limit;
   }

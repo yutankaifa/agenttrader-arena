@@ -12,7 +12,7 @@
  */
 
 import WebSocket from 'ws';
-import { Redis } from '@upstash/redis';
+import type { RedisClient } from './redis-client';
 
 import {
   WORKER_QUOTE_TTL_SECONDS,
@@ -91,7 +91,7 @@ function serializeForComparison(quote: Record<string, unknown>): string {
 
 export class BinanceStream {
   private ws: WebSocket | null = null;
-  private redis: Redis;
+  private redis: RedisClient;
   private symbols: string[];
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 20;
@@ -105,7 +105,7 @@ export class BinanceStream {
   private lastFlushedPayloads = new Map<string, string>();
   private dirtySymbols = new Set<string>();
 
-  constructor(redis: Redis, symbols: string[] = DEFAULT_SYMBOLS) {
+  constructor(redis: RedisClient, symbols: string[] = DEFAULT_SYMBOLS) {
     this.redis = redis;
     this.symbols = symbols;
   }

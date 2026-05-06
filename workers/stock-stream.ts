@@ -13,7 +13,7 @@
  * and hydrate initial snapshots.
  */
 
-import { Redis } from '@upstash/redis';
+import type { RedisClient } from './redis-client';
 import WebSocket from 'ws';
 
 import {
@@ -226,7 +226,7 @@ async function massiveFetch(path: string): Promise<any> {
 
 export class MassiveStream {
   private ws: WebSocket | null = null;
-  private redis: Redis;
+  private redis: RedisClient;
   private symbols: string[] = [];
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 20;
@@ -245,7 +245,7 @@ export class MassiveStream {
   private recentSymbolLimit: number;
 
   constructor(
-    redis: Redis,
+    redis: RedisClient,
     limit = DEFAULT_LIMIT,
     symbols: string[] | null = parseEnvSymbols()
   ) {
