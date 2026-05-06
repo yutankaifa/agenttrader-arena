@@ -152,6 +152,9 @@ const { derivePredictionDecisionSymbol } = await import(
 const { buildTradableObjects } = await import(
   new URL('../src/lib/agent-detail-request-tradeability.ts', import.meta.url).href
 );
+const { buildPredictionOutcomeQuoteContext } = await import(
+  new URL('../src/lib/agent-detail-request-market-data.ts', import.meta.url).href
+);
 const { buildArenaStatusStripModel } = await import(
   new URL('../src/lib/arena-status-strip-model.ts', import.meta.url).href
 );
@@ -171,6 +174,9 @@ const {
   writeDetailRequestPersistenceRow,
 } = await import(
   new URL('../src/lib/agent-persistence-db.ts', import.meta.url).href
+);
+const { polymarketAdapter } = await import(
+  new URL('../src/lib/market-adapter/index.ts', import.meta.url).href
 );
 const {
   handleAgentDecisionPost,
@@ -930,6 +936,87 @@ await runTest(
     assert.equal(objects?.[0]?.tradable, false);
     assert.equal(objects?.[0]?.decision_allowed, false);
     assert.equal(objects?.[0]?.blocked_reason, 'QUOTE_UNAVAILABLE');
+  }
+);
+
+await runTest(
+  'buildPredictionOutcomeQuoteContext prefers live exact outcome quotes before market_details fallback',
+  async () => {
+    const originalGetQuote = polymarketAdapter.getQuote;
+    polymarketAdapter.getQuote = async () => ({
+      market: 'prediction',
+      provider: 'polymarket',
+      symbol: 'new-coronavirus-pandemic-in-2026',
+      lastPrice: 0.1065,
+      bid: 0.1055,
+      ask: 0.1075,
+      midpoint: 0.1065,
+      spread: 0.002,
+      bidSize: null,
+      askSize: null,
+      volume24h: null,
+      change24h: null,
+      timestamp: new Date().toISOString(),
+      outcomeId: 'yes_token',
+      outcomeName: 'Yes',
+    });
+
+    try {
+      const context = await buildPredictionOutcomeQuoteContext(
+        [
+          {
+            objectId: 'pm:new-coronavirus-pandemic-in-2026',
+            requestedObjectId: 'pm:new-coronavirus-pandemic-in-2026',
+            market: 'prediction',
+            symbol: 'new-coronavirus-pandemic-in-2026',
+            eventId: 'new-coronavirus-pandemic-in-2026',
+            outcomeKey: null,
+            requestedScope: 'event',
+            predictionLookupKind: 'canonical_event',
+            predictionSearchQuery: null,
+            predictionTokenId: null,
+          },
+        ],
+        new Map([
+          [
+            'pm:new-coronavirus-pandemic-in-2026',
+            {
+              symbol: 'new-coronavirus-pandemic-in-2026',
+              name: 'New Coronavirus Pandemic in 2026?',
+              title: 'New Coronavirus Pandemic in 2026?',
+              description: null,
+              event_title: null,
+              category: null,
+              active: true,
+              closed: false,
+              archived: false,
+              accepting_orders: true,
+              market_status: 'active',
+              resolves_at: null,
+              resolved_outcome_id: null,
+              rules: null,
+              resolution_source: null,
+              volume_24h: null,
+              liquidity: null,
+              outcomes: [{ id: 'yes_token', name: 'Yes', price: 0.1065 }],
+              condition_id: null,
+              clob_token_ids: ['yes_token'],
+              quote: null,
+            },
+          ],
+        ]),
+        new Map()
+      );
+
+      const result = context.get(
+        'NEW-CORONAVIRUS-PANDEMIC-IN-2026::YES_TOKEN'
+      );
+      assert.equal(result?.source, 'live:polymarket');
+      assert.equal(result?.quote?.bid, 0.1055);
+      assert.equal(result?.quote?.ask, 0.1075);
+    } finally {
+      polymarketAdapter.getQuote = originalGetQuote;
+    }
   }
 );
 

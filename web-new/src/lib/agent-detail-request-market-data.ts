@@ -33,6 +33,12 @@ type DetailCandleResult = {
   error?: string;
 };
 
+const DETAIL_QUOTE_STALE_MS: Record<MarketType, number> = {
+  stock: 120_000,
+  crypto: 60_000,
+  prediction: 30_000,
+};
+
 function buildPredictionInstrumentId(symbol: string, outcomeId?: string | null) {
   return outcomeId ? `${symbol}::${outcomeId}` : symbol;
 }
@@ -42,6 +48,22 @@ function getLiveQuoteProviderError(market: MarketType) {
     return 'provider_not_configured:MASSIVE_API_KEY';
   }
   return null;
+}
+
+function isStaleDetailQuote(
+  market: MarketType,
+  quote: Pick<MarketQuote, 'timestamp'> | null | undefined
+) {
+  if (!quote?.timestamp) {
+    return false;
+  }
+
+  const parsedTimestamp = Date.parse(quote.timestamp);
+  if (!Number.isFinite(parsedTimestamp)) {
+    return false;
+  }
+
+  return Date.now() - parsedTimestamp > DETAIL_QUOTE_STALE_MS[market];
 }
 
 async function fetchLiveDetailQuote(input: {
@@ -215,6 +237,13 @@ async function resolveDetailQuote(input: {
   exactOutcomeRequired?: boolean;
 }) {
   const normalizedOutcomeId = input.outcomeId ?? null;
+  const preferFreshExactPredictionQuote =
+    input.market === 'prediction' && input.exactOutcomeRequired === true;
+  let staleFallback:
+    | (DetailQuoteResult & {
+        quote: MarketQuote;
+      })
+    | null = null;
 
   if (isRedisConfigured()) {
     try {
@@ -224,13 +253,22 @@ async function resolveDetailQuote(input: {
         input.market === 'prediction' ? normalizedOutcomeId : null
       );
       if (redisQuote) {
-        return await maybeEnrichDetailQuoteMetrics(
+        const enriched = await maybeEnrichDetailQuoteMetrics(
           {
             quote: redisQuote,
             source: 'redis',
           },
           input
         );
+        if (
+          preferFreshExactPredictionQuote &&
+          enriched.quote &&
+          isStaleDetailQuote(input.market, enriched.quote)
+        ) {
+          staleFallback = enriched as DetailQuoteResult & { quote: MarketQuote };
+        } else {
+          return enriched;
+        }
       }
     } catch {
       // fall through
@@ -240,13 +278,22 @@ async function resolveDetailQuote(input: {
   if (isDatabaseConfigured()) {
     const databaseQuote = await getDetailQuoteFromDatabase(input);
     if (databaseQuote) {
-      return await maybeEnrichDetailQuoteMetrics(
+      const enriched = await maybeEnrichDetailQuoteMetrics(
         {
           quote: databaseQuote,
           source: 'db',
         },
         input
       );
+      if (
+        preferFreshExactPredictionQuote &&
+        enriched.quote &&
+        isStaleDetailQuote(input.market, enriched.quote)
+      ) {
+        staleFallback ??= enriched as DetailQuoteResult & { quote: MarketQuote };
+      } else {
+        return enriched;
+      }
     }
   }
 
@@ -256,16 +303,30 @@ async function resolveDetailQuote(input: {
       : getLatestQuote(input.symbol, input.market, normalizedOutcomeId) ??
         getLatestQuote(input.symbol, input.market);
   if (storeQuote) {
-    return await maybeEnrichDetailQuoteMetrics(
+    const enriched = await maybeEnrichDetailQuoteMetrics(
       {
         quote: storeQuote,
         source: 'db',
       },
       input
     );
+    if (
+      preferFreshExactPredictionQuote &&
+      enriched.quote &&
+      isStaleDetailQuote(input.market, enriched.quote)
+    ) {
+      staleFallback ??= enriched as DetailQuoteResult & { quote: MarketQuote };
+    } else {
+      return enriched;
+    }
   }
 
-  return fetchLiveDetailQuote(input);
+  const liveResult = await fetchLiveDetailQuote(input);
+  if (liveResult.quote) {
+    return liveResult;
+  }
+
+  return staleFallback ?? liveResult;
 }
 
 async function fetchLiveDetailCandles(input: {
@@ -506,29 +567,14 @@ async function getPredictionOutcomeQuoteFallback(input: {
   outcomeId: string;
   marketDetails: PredictionMarketDetailsView | null;
 }) {
-  if (isDatabaseConfigured()) {
-    const databaseQuote = await getDetailQuoteFromDatabase({
-      market: 'prediction',
-      symbol: input.symbol,
-      outcomeId: input.outcomeId,
-      exactOutcomeRequired: true,
-    });
-    if (databaseQuote) {
-      return {
-        quote: databaseQuote,
-        source: 'db',
-      } satisfies DetailQuoteResult;
-    }
-  }
-
-  const cachedQuote =
-    getLatestQuote(input.symbol, 'prediction', input.outcomeId) ??
-    getLatestQuote(input.symbol, 'prediction');
-  if (cachedQuote) {
-    return {
-      quote: cachedQuote,
-      source: 'cache',
-    } satisfies DetailQuoteResult;
+  const exactQuote = await resolveDetailQuote({
+    market: 'prediction',
+    symbol: input.symbol,
+    outcomeId: input.outcomeId,
+    exactOutcomeRequired: true,
+  });
+  if (exactQuote.quote) {
+    return exactQuote;
   }
 
   const matchedOutcome =
