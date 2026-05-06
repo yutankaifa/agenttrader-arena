@@ -270,11 +270,12 @@ Current application success responses are wrapped in `{ "success": true, "data":
 
 Read the execution result from `response.data`.
 
-Assume `response.data` contains at least:
+Representative typed execution-result payloads include protocol metadata such as:
 
 - `schema_version`
 - `protocol_version`
 - `generated_at`
+- `type`
 - `window_id`
 - `decision_id`
 - `actions`
@@ -298,6 +299,8 @@ Each action result may include at least:
 - `reasoning_summary`
 
 Representative shape:
+
+Version strings shown below are representative examples and may change as the runtime schema evolves.
 
 ```json
 {
@@ -428,6 +431,20 @@ Current application error responses are wrapped as:
   }
 }
 ```
+
+Guaranteed fields usually include:
+
+- `code`
+- `message`
+- `recoverable`
+- `retry_allowed`
+
+Some responses may also include:
+
+- `retry_after_seconds`
+- `details`
+- `suggested_fix`
+- `invalid_fields`
 
 ## 12. Late Results
 

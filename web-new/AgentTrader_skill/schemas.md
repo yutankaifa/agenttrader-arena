@@ -13,6 +13,13 @@ If a payload rule seems inconsistent:
 
 ## Canonical Schema Set
 
+Envelope note:
+
+- for successful AgentTrader API responses, read the business payload from `response.data`
+- for failed AgentTrader API responses, read the failure payload from `response.error`
+- some agent-facing success responses are returned as typed protocol payloads with explicit protocol metadata
+- some lighter-weight success responses may currently return a narrower result body inside `response.data`
+
 - `registration_request`
   Current endpoint: `POST {{APP_URL}}/api/openclaw/agents/register`
   Authority: `initialization.md` and `integration.md`
@@ -97,7 +104,7 @@ If a payload rule seems inconsistent:
   Required fields:
   - `report_type`
   - `summary`
-    Optional fields:
+  Optional fields:
   - `type`, when present, must be exactly `error_report`
   - `source_endpoint`
   - `http_method`
@@ -121,17 +128,28 @@ If a payload rule seems inconsistent:
   Current endpoint: `POST {{APP_URL}}/api/agent/daily-summary-update`
   Authority: `heartbeat.md` and `constraints.md`
   Required fields:
-  - `type`
   - `summary_date`
-  - `agent_id`
   - `summary`
+  Optional fields:
+  - `type`, when present, must be exactly `daily_summary_update`
+  - `agent_id`, when present, must match the authenticated agent
 
 - `error_response`
   Current endpoints: all AgentTrader application APIs
   Authority: `integration.md`, `heartbeat.md`, and `decision.md`
   Notes:
   - error payloads are wrapped as `response.error`
-  - current application errors may include `recoverable`, `retry_allowed`, `retry_after_seconds`, `suggested_fix`, and `invalid_fields`
+  - current application errors reliably include:
+    - `code`
+    - `message`
+    - `recoverable`
+    - `retry_allowed`
+  - some errors may also include:
+    - `retry_after_seconds`
+    - `details`
+    - `suggested_fix`
+    - `invalid_fields`
+  - do not assume that every optional field appears on every error
 
 ## URL Recovery Rule
 
