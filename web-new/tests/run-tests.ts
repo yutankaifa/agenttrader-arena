@@ -146,6 +146,12 @@ const {
 const { resolveExecutionQuote } = await import(
   new URL('../src/lib/execution-quote-resolver.ts', import.meta.url).href
 );
+const { derivePredictionDecisionSymbol } = await import(
+  new URL('../src/lib/agent-decision-service.ts', import.meta.url).href
+);
+const { buildTradableObjects } = await import(
+  new URL('../src/lib/agent-detail-request-tradeability.ts', import.meta.url).href
+);
 const { buildArenaStatusStripModel } = await import(
   new URL('../src/lib/arena-status-strip-model.ts', import.meta.url).href
 );
@@ -842,6 +848,88 @@ await runTest(
     assert.equal(result.source, 'db:polymarket');
     assert.equal(result.rejectionReason, 'last_price_outside_top_of_book');
     assert.equal(result.quoteAtSubmission?.last_price, 0.9);
+  }
+);
+
+await runTest(
+  'derivePredictionDecisionSymbol keeps the market slug from object_id for prediction execution lookups',
+  () => {
+    const result = derivePredictionDecisionSymbol({
+      object_id:
+        'pm:will-the-fed-increase-interest-rates-by-25-bps-after-the-june-2026-meeting:YES',
+      event_id: 'fed-decision-in-june-825',
+      outcome_name: 'Yes',
+    });
+
+    assert.equal(
+      result,
+      'will-the-fed-increase-interest-rates-by-25-bps-after-the-june-2026-meeting'
+    );
+  }
+);
+
+await runTest(
+  'buildTradableObjects does not mark market_details-only prediction outcomes as decision-allowed',
+  () => {
+    const objects = buildTradableObjects(
+      {
+        objectId: 'pm:new-coronavirus-pandemic-in-2026',
+        requestedObjectId: 'pm:new-coronavirus-pandemic-in-2026',
+        market: 'prediction',
+        symbol: 'new-coronavirus-pandemic-in-2026',
+        eventId: 'new-coronavirus-pandemic-in-2026',
+        outcomeKey: null,
+        requestedScope: 'event',
+        predictionLookupKind: 'canonical_event',
+        predictionSearchQuery: null,
+        predictionTokenId: null,
+      },
+      null,
+      {
+        symbol: 'new-coronavirus-pandemic-in-2026',
+        name: 'New Coronavirus Pandemic in 2026?',
+        title: 'New Coronavirus Pandemic in 2026?',
+        description: null,
+        event_title: null,
+        category: null,
+        active: true,
+        closed: false,
+        archived: false,
+        accepting_orders: true,
+        market_status: 'active',
+        resolves_at: null,
+        resolved_outcome_id: null,
+        rules: null,
+        resolution_source: null,
+        volume_24h: null,
+        liquidity: null,
+        outcomes: [
+          {
+            id: 'yes_token',
+            name: 'Yes',
+            price: 0.1065,
+          },
+        ],
+        condition_id: null,
+        clob_token_ids: ['yes_token'],
+        quote: null,
+      },
+      {
+        status: 'running',
+        pausedByOperator: false,
+        riskTag: null,
+        totalEquity: 10000,
+        availableCash: 5000,
+        canOpenNewPositions: true,
+        positions: [],
+      },
+      new Map()
+    );
+
+    assert.equal(objects?.[0]?.quote?.source, 'market_details');
+    assert.equal(objects?.[0]?.tradable, false);
+    assert.equal(objects?.[0]?.decision_allowed, false);
+    assert.equal(objects?.[0]?.blocked_reason, 'QUOTE_UNAVAILABLE');
   }
 );
 

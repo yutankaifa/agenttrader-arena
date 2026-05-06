@@ -221,6 +221,24 @@ function normalizePredictionDecisionObjectId(
   };
 }
 
+export function derivePredictionDecisionSymbol(input: {
+  object_id: string;
+  event_id?: string | null;
+  outcome_name?: string | null;
+}) {
+  const normalizedObject = normalizePredictionDecisionObjectId(
+    input.object_id,
+    input.outcome_name
+  );
+  if (!normalizedObject) {
+    return null;
+  }
+
+  // Execution quotes must use the market slug from object_id. Event ids can be
+  // broader series/event aliases and are not reliable quote lookup keys.
+  return normalizedObject.event_id;
+}
+
 function normalizePredictionToken(value: unknown) {
   if (typeof value !== 'string') return null;
   const normalized = value.trim();
@@ -290,9 +308,11 @@ async function normalizeDecisionActionIdentity(
     };
   }
 
-  const symbol = normalizePredictionToken(
-    input.symbol ?? input.event_id ?? normalizedObject.event_id
-  );
+  const symbol = derivePredictionDecisionSymbol({
+    object_id: input.object_id,
+    event_id: normalizePredictionToken(input.event_id),
+    outcome_name: normalizeOptionalString(input.outcome_name),
+  });
   const eventId = normalizePredictionToken(
     input.event_id ?? symbol ?? normalizedObject.event_id
   );

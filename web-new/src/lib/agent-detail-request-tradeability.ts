@@ -579,6 +579,16 @@ type PredictionTradableObjectCandidate = {
   blocked_reason: string | null;
 };
 
+function hasExecutionQualityPredictionQuote(
+  quoteResult: DetailQuoteResult | null | undefined
+) {
+  if (!quoteResult?.quote) {
+    return false;
+  }
+
+  return quoteResult.source !== 'market_details';
+}
+
 export function buildTradableObjects(
   object: NormalizedDetailObject,
   eventDetails: PredictionEventDetailsView | null,
@@ -626,7 +636,12 @@ export function buildTradableObjects(
         outcomeQuote?.timestamp ?? null
       );
       const objectRisk = buildObjectRisk(outcomeObject, decisionContext);
-      const unavailableReason = derivePredictionOutcomeQuoteBlockedReason(outcomeQuote);
+      const hasExecutionQualityQuote = hasExecutionQualityPredictionQuote(
+        outcomeQuoteResult
+      );
+      const unavailableReason = hasExecutionQualityQuote
+        ? derivePredictionOutcomeQuoteBlockedReason(outcomeQuote)
+        : 'QUOTE_UNAVAILABLE';
       const tradePolicy = deriveDetailTradePolicy({
         object: outcomeObject,
         decisionContext,
@@ -634,7 +649,7 @@ export function buildTradableObjects(
         marketDetails: candidateMarket,
         objectRisk,
         unavailableReason,
-        quoteAvailable: Boolean(outcomeQuote ?? outcome.price != null),
+        quoteAvailable: hasExecutionQualityQuote,
       });
 
       return {
