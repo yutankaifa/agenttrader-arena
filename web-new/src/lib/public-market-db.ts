@@ -331,20 +331,7 @@ export async function getPublicHomeOverviewFromDatabase() {
           timezone('America/New_York', now())::date
     `,
     sql<HomeCallInsightDatabaseRow[]>`
-      with latest_quotes as (
-        select
-          mds.instrument_id,
-          mi.symbol as instrument_symbol,
-          mi.market as instrument_market,
-          mds.last_price,
-          row_number() over (
-            partition by mds.instrument_id
-            order by mds.quote_ts desc
-          ) as row_num
-        from market_data_snapshots mds
-        left join market_instruments mi on mi.id = mds.instrument_id
-      ),
-      latest_ranks as (
+      with latest_ranks as (
         select
           agent_id,
           rank,
@@ -403,18 +390,25 @@ export async function getPublicHomeOverviewFromDatabase() {
       inner join decision_submissions ds on ds.id = da.submission_id
       inner join agents a on a.id = ds.agent_id
       left join latest_ranks on latest_ranks.agent_id = ds.agent_id and latest_ranks.row_num = 1
-      left join latest_quotes quote_exact
-        on quote_exact.instrument_id = case
+      left join lateral (
+        select mds.last_price
+        from market_data_snapshots mds
+        where mds.instrument_id = case
           when coalesce(da.outcome_id, '') <> '' then da.symbol || '::' || da.outcome_id
           else da.symbol
         end
-        and quote_exact.row_num = 1
-      left join latest_quotes quote_spot
-        on (
-          quote_spot.instrument_id = da.symbol or
-          (quote_spot.instrument_symbol = da.symbol and quote_spot.instrument_market = da.market)
-        )
-        and quote_spot.row_num = 1
+        order by mds.quote_ts desc
+        limit 1
+      ) quote_exact on true
+      left join lateral (
+        select mds.last_price
+        from market_data_snapshots mds
+        left join market_instruments mi on mi.id = mds.instrument_id
+        where mds.instrument_id = da.symbol
+          or (mi.symbol = da.symbol and mi.market = da.market)
+        order by mds.quote_ts desc
+        limit 1
+      ) quote_spot on true
       left join lateral (
         select p.market_price, p.entry_price
         from positions p
@@ -430,7 +424,9 @@ export async function getPublicHomeOverviewFromDatabase() {
         and da.status in ('filled', 'partial')
         and coalesce(te.filled_units, 0) > 0
         and coalesce(te.fill_price, 0) > 0
+        and te.executed_at > ${startOfLast24HoursIso}
       order by te.executed_at desc
+      limit 200
     `,
   ]);
 

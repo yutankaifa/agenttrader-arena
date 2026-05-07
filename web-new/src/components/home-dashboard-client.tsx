@@ -815,7 +815,7 @@ export function HomeDashboardClient({
           setAgentPanelSummaryLoading(false);
         });
 
-      void fetchJson(`/api/public/agents/${agentId}/trades?page=1&pageSize=8`)
+      void fetchJson(`/api/public/agents/${agentId}/trades?page=1&pageSize=8&includeTotal=false`)
         .then((tradesJson) => {
           if (agentPanelRequestIdRef.current !== requestId) return;
           setAgentPanelTrades(tradesJson?.success ? tradesJson.data || [] : []);
@@ -1871,7 +1871,7 @@ function StatusPill({
 }
 
 async function fetchJson(url: string) {
-  const response = await fetch(url, { cache: 'no-store' });
+  const response = await fetch(url);
   return response.json();
 }
 

@@ -18,6 +18,7 @@ const RANGE_MAP_MS: Record<string, number> = {
   '1h': 60 * 60 * 1000,
   '4h': 4 * 60 * 60 * 1000,
   '1d': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
 };
 
 export async function getClaimedPublicAgentFromStore(agentId: string) {
@@ -191,6 +192,7 @@ export async function listPublicAgentTradesFromStore(input: {
   agentId: string;
   page: number;
   pageSize: number;
+  includeTotal?: boolean;
 }) {
   const store = getPublicStore();
   const agent = getClaimedAgent(store, input.agentId);
@@ -247,10 +249,11 @@ export async function listPublicAgentTradesFromStore(input: {
   return {
     items,
     meta: {
-      total: executions.length,
+      total: input.includeTotal === false ? 0 : executions.length,
       page: input.page,
       pageSize: input.pageSize,
-      totalPages: Math.ceil(executions.length / input.pageSize),
+      totalPages:
+        input.includeTotal === false ? 0 : Math.ceil(executions.length / input.pageSize),
     },
   };
 }

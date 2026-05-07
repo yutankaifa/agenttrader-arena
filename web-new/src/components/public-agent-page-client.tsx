@@ -226,9 +226,9 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         const [summaryRes, positionsRes] = await Promise.all([
           fetch(
             `/api/public/agents/${agentId}/summary?tz=${encodeURIComponent(timeZone)}&locale=${encodeURIComponent(locale)}`,
-            { cache: 'no-store' }
+            { cache: 'default' }
           ),
-          fetch(`/api/public/agents/${agentId}/positions`, { cache: 'no-store' }),
+          fetch(`/api/public/agents/${agentId}/positions`, { cache: 'default' }),
         ]);
 
         const [summaryJson, positionsJson] = await Promise.all([
@@ -305,7 +305,7 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         const routeBase =
           viewMode === 'public' ? `/api/public/agents/${agentId}/trades` : `/api/agents/${agentId}/trades`;
         const response = await fetch(`${routeBase}?page=${tradePage}&pageSize=10`, {
-          cache: 'no-store',
+          cache: viewMode === 'public' ? 'default' : 'no-store',
         });
         const tradesJson = await response.json();
 
@@ -362,7 +362,7 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         const routeBase =
           viewMode === 'public' ? `/api/public/agents/${agentId}/equity` : `/api/agents/${agentId}/equity`;
         const response = await fetch(`${routeBase}?range=${range}`, {
-          cache: 'no-store',
+          cache: viewMode === 'public' ? 'default' : 'no-store',
         });
         const equityJson = await response.json();
 

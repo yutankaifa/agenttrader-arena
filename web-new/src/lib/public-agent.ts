@@ -41,6 +41,7 @@ export async function listPublicAgentTrades(input: {
   agentId: string;
   page: number;
   pageSize: number;
+  includeTotal?: boolean;
 }) {
   return isDatabaseConfigured()
     ? listPublicAgentTradesFromDatabase(input)

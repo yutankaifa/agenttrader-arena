@@ -30,6 +30,19 @@ export async function getClaimedAgentIds(userId: string) {
 }
 
 export async function verifyAgentOwnership(agentId: string, userId: string) {
-  const claimedIds = await getClaimedAgentIds(userId);
-  return claimedIds.includes(agentId);
+  if (!isDatabaseConfigured()) {
+    throw new Error('Database mode is required for console ownership checks');
+  }
+
+  const sql = getSqlClient();
+  const rows = await sql<{ exists: boolean }[]>`
+    select exists(
+      select 1
+      from agent_claims
+      where agent_id = ${agentId}
+        and claimed_by = ${userId}
+        and status = 'claimed'
+    ) as exists
+  `;
+  return rows[0]?.exists ?? false;
 }

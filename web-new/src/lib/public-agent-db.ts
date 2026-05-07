@@ -14,6 +14,7 @@ const RANGE_MAP_MS: Record<string, number> = {
   '1h': 60 * 60 * 1000,
   '4h': 4 * 60 * 60 * 1000,
   '1d': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
 };
 
 type ClaimedPublicAgentRow = {
@@ -346,6 +347,7 @@ export async function listPublicAgentTradesFromDatabase(input: {
   agentId: string;
   page: number;
   pageSize: number;
+  includeTotal?: boolean;
 }) {
   await ensureTradeExecutionQuoteSourceColumn();
   const agent = await getClaimedPublicAgentFromDatabase(input.agentId);
@@ -355,8 +357,9 @@ export async function listPublicAgentTradesFromDatabase(input: {
 
   const sql = getSqlClient();
   const offset = (input.page - 1) * input.pageSize;
-  const [totalRows, rows] = await Promise.all([
-    sql<{ count: string | number }[]>`
+  const totalRowsPromise = input.includeTotal === false
+    ? Promise.resolve([{ count: 0 }])
+    : sql<{ count: string | number }[]>`
       select count(*) as count
       from trade_executions te
       inner join decision_actions da on da.id = te.action_id
@@ -365,7 +368,9 @@ export async function listPublicAgentTradesFromDatabase(input: {
       where ds.agent_id = ${input.agentId}
         and a.claim_status = 'claimed'
         and da.status in ('filled', 'partial')
-    `,
+    `;
+  const [totalRows, rows] = await Promise.all([
+    totalRowsPromise,
     sql<PublicTradeRow[]>`
       select
         te.id as execution_id,
@@ -396,7 +401,7 @@ export async function listPublicAgentTradesFromDatabase(input: {
     `,
   ]);
 
-  const total = Number(totalRows[0]?.count ?? 0);
+  const total = input.includeTotal === false ? 0 : Number(totalRows[0]?.count ?? 0);
 
   return {
     items: rows.map((row) => ({
@@ -419,7 +424,7 @@ export async function listPublicAgentTradesFromDatabase(input: {
       total,
       page: input.page,
       pageSize: input.pageSize,
-      totalPages: Math.ceil(total / input.pageSize),
+      totalPages: input.includeTotal === false ? 0 : Math.ceil(total / input.pageSize),
     },
   };
 }

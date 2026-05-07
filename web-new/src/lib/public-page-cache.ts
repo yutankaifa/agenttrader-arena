@@ -59,8 +59,8 @@ export const getCachedPublicAgentPositions = unstable_cache(
 );
 
 export const getCachedPublicAgentTrades = unstable_cache(
-  async (agentId: string, page: number, pageSize: number) =>
-    listPublicAgentTrades({ agentId, page, pageSize }),
+  async (agentId: string, page: number, pageSize: number, includeTotal = true) =>
+    listPublicAgentTrades({ agentId, page, pageSize, includeTotal }),
   ['public-agent-trades'],
   {
     revalidate: 15,

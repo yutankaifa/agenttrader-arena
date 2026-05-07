@@ -660,8 +660,24 @@ export async function ensureApplicationDatabaseSchema() {
           on trade_executions (action_id)
         `;
         await sql`
+          create index if not exists idx_trade_executions_executed_at
+          on trade_executions (executed_at desc)
+        `;
+        await sql`
+          create index if not exists idx_decision_actions_submission_status
+          on decision_actions (submission_id, status)
+        `;
+        await sql`
+          create index if not exists idx_positions_agent_symbol_market_object
+          on positions (agent_id, symbol, market, event_id, outcome_id, updated_at desc)
+        `;
+        await sql`
           create index if not exists idx_live_trade_events_agent_time
           on live_trade_events (agent_id, executed_at desc)
+        `;
+        await sql`
+          create index if not exists idx_live_trade_events_executed_at
+          on live_trade_events (executed_at desc)
         `;
         await sql`
           create index if not exists idx_account_snapshots_agent_ts

@@ -209,75 +209,25 @@ export async function listOwnedAgentTrades(input: {
   await ensureTradeExecutionQuoteSourceColumn();
   const sql = getSqlClient();
   const offset = (input.page - 1) * input.pageSize;
-  const submissionRows = await sql<{ id: string }[]>`
-    select id
-    from decision_submissions
-    where agent_id = ${input.agentId}
-  `;
-  const submissionIds = submissionRows.map((item) => item.id);
-  if (!submissionIds.length) {
-    return {
-      items: [],
-      meta: {
-        total: 0,
-        page: input.page,
-        pageSize: input.pageSize,
-        totalPages: 0,
-      },
-    };
-  }
-
-  const actionRows = await sql<
-    {
-      id: string;
-      client_action_id: string | null;
-      symbol: string | null;
-      object_id: string | null;
-      side: string | null;
-      market: string | null;
-      submission_id: string;
-      status: string | null;
-    }[]
-  >`
-    select
-      id,
-      client_action_id,
-      symbol,
-      object_id,
-      side,
-      market,
-      submission_id,
-      status
-    from decision_actions
-    where submission_id = any(${submissionIds})
-  `;
-  const filledActions = actionRows.filter(
-    (item) => item.status === 'filled' || item.status === 'partial'
-  );
-  const actionIds = filledActions.map((item) => item.id);
-  const actionMap = new Map(filledActions.map((item) => [item.id, item]));
-  if (!actionIds.length) {
-    return {
-      items: [],
-      meta: {
-        total: 0,
-        page: input.page,
-        pageSize: input.pageSize,
-        totalPages: 0,
-      },
-    };
-  }
 
   const [totalRows, executionRows] = await Promise.all([
     sql<{ count: string | number }[]>`
       select count(*) as count
-      from trade_executions
-      where action_id = any(${actionIds})
+      from trade_executions te
+      inner join decision_actions da on da.id = te.action_id
+      inner join decision_submissions ds on ds.id = da.submission_id
+      where ds.agent_id = ${input.agentId}
+        and da.status in ('filled', 'partial')
     `,
     sql<
       {
         id: string;
         action_id: string;
+        client_action_id: string | null;
+        symbol: string | null;
+        object_id: string | null;
+        side: string | null;
+        market: string | null;
         requested_units: number;
         filled_units: number;
         fill_price: number;
@@ -289,19 +239,27 @@ export async function listOwnedAgentTrades(input: {
       }[]
     >`
       select
-        id,
-        action_id,
-        requested_units,
-        filled_units,
-        fill_price,
-        slippage,
-        fee,
-        quote_source,
-        execution_method,
-        executed_at
-      from trade_executions
-      where action_id = any(${actionIds})
-      order by executed_at desc
+        te.id,
+        te.action_id,
+        da.client_action_id,
+        da.symbol,
+        da.object_id,
+        da.side,
+        da.market,
+        te.requested_units,
+        te.filled_units,
+        te.fill_price,
+        te.slippage,
+        te.fee,
+        te.quote_source,
+        te.execution_method,
+        te.executed_at
+      from trade_executions te
+      inner join decision_actions da on da.id = te.action_id
+      inner join decision_submissions ds on ds.id = da.submission_id
+      where ds.agent_id = ${input.agentId}
+        and da.status in ('filled', 'partial')
+      order by te.executed_at desc
       limit ${input.pageSize}
       offset ${offset}
     `,
@@ -310,14 +268,13 @@ export async function listOwnedAgentTrades(input: {
 
   return {
     items: executionRows.map((execution) => {
-      const action = actionMap.get(execution.action_id);
       return {
         executionId: execution.id,
-        actionId: action?.client_action_id || execution.action_id,
-        symbol: action?.symbol || 'Unknown',
-        objectId: action?.object_id || null,
-        side: action?.side || 'unknown',
-        market: action?.market || 'unknown',
+        actionId: execution.client_action_id || execution.action_id,
+        symbol: execution.symbol || 'Unknown',
+        objectId: execution.object_id || null,
+        side: execution.side || 'unknown',
+        market: execution.market || 'unknown',
         requestedUnits: execution.requested_units,
         filledUnits: execution.filled_units,
         fillPrice: execution.fill_price,
@@ -400,6 +357,7 @@ export async function getOwnedAgentEquity(agentId: string, range: string) {
     '1h': 60 * 60 * 1000,
     '4h': 4 * 60 * 60 * 1000,
     '1d': 24 * 60 * 60 * 1000,
+    '7d': 7 * 24 * 60 * 60 * 1000,
   };
   const durationMs = durationMap[range];
   const cutoff = durationMs ? new Date(Date.now() - durationMs) : null;

@@ -15,7 +15,8 @@ export async function GET(
     50,
     Math.max(1, parseNumberParam(url.searchParams.get('pageSize'), 20))
   );
-  const result = await getCachedPublicAgentTrades(id, page, pageSize);
+  const includeTotal = url.searchParams.get('includeTotal') !== 'false';
+  const result = await getCachedPublicAgentTrades(id, page, pageSize, includeTotal);
   if (!result) return agentNotFound('Agent');
   return addCacheHeaders(agentSuccess(result.items, result.meta));
 }
