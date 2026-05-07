@@ -12,6 +12,8 @@ type EquityPoint = {
   returnRate?: number;
 };
 
+const MAX_VISIBLE_POINTS = 96;
+
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 240;
 const PLOT_TOP = 20;
@@ -68,6 +70,28 @@ function formatHeaderTimeLabel(value: string | null, locale: string) {
   return formatUsMarketDateTime(value, locale, 'dateTime');
 }
 
+function downsampleSeries(series: EquityPoint[], maxPoints: number) {
+  if (series.length <= maxPoints) {
+    return series;
+  }
+
+  const lastIndex = series.length - 1;
+  const step = lastIndex / (maxPoints - 1);
+  const indexes = new Set<number>();
+
+  for (let index = 0; index < maxPoints; index += 1) {
+    indexes.add(Math.round(index * step));
+  }
+
+  indexes.add(0);
+  indexes.add(lastIndex);
+
+  return Array.from(indexes)
+    .sort((left, right) => left - right)
+    .map((index) => series[index])
+    .filter((item): item is EquityPoint => Boolean(item));
+}
+
 export function EquityBars({
   series,
   locale = 'en-US',
@@ -76,9 +100,10 @@ export function EquityBars({
   locale?: string;
 }) {
   const { t } = useSiteLocale();
-  const visibleSeries = series
-    .filter((item) => item.ts && Number.isFinite(item.equity))
-    .slice(-48);
+  const visibleSeries = downsampleSeries(
+    series.filter((item) => item.ts && Number.isFinite(item.equity)),
+    MAX_VISIBLE_POINTS
+  );
   const [selectedIndex, setSelectedIndex] = useState(visibleSeries.length - 1);
 
   useEffect(() => {
@@ -155,7 +180,8 @@ export function EquityBars({
             {t((m) => m.publicAgent.returnLabel)} {formatPercent(selectedPoint.returnRate, locale)}
           </p>
           <p>
-            {t((m) => m.publicAgent.drawdown)} {formatPercent(selectedPoint.drawdown, locale)}
+            {t((m) => m.publicAgent.pointDrawdown)}{' '}
+            {formatPercent(selectedPoint.drawdown, locale)}
           </p>
         </div>
       </div>

@@ -295,6 +295,8 @@ export const en = {
     points: 'points',
     current: 'Current',
     drawdown: 'Drawdown',
+    pointDrawdown: 'Point Drawdown',
+    maxDrawdown: 'Max Drawdown',
     total: 'Total',
     dailySummary: 'Daily Summary',
     latestPublicNote: 'Latest public note',

@@ -289,6 +289,8 @@ export const zh = {
     points: '个点',
     current: '当前',
     drawdown: '回撤',
+    pointDrawdown: '点位回撤',
+    maxDrawdown: '最大回撤',
     total: '总收益',
     dailySummary: '日报摘要',
     latestPublicNote: '最新公开说明',

@@ -542,7 +542,7 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
           className="border-b border-black/10 md:border-r md:border-b-0 xl:border-r"
         />
         <MetricCard
-          label={t((m) => m.publicAgent.drawdown)}
+          label={t((m) => m.publicAgent.maxDrawdown)}
           value={
             performance.drawdown != null ? formatPercent(performance.drawdown, locale) : '--'
           }
@@ -579,7 +579,7 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
 
           <div className="mt-4 flex flex-wrap gap-6 text-sm text-black/62">
             <span>{t((m) => m.publicAgent.current)} {formatCurrency(safeEquity.stats.currentEquity, locale)}</span>
-            <span>{t((m) => m.publicAgent.drawdown)} {formatPercent(safeEquity.stats.maxDrawdown, locale)}</span>
+            <span>{t((m) => m.publicAgent.maxDrawdown)} {formatPercent(safeEquity.stats.maxDrawdown, locale)}</span>
             <span>{t((m) => m.publicAgent.total)} {formatPercent(safeEquity.stats.totalReturn, locale)}</span>
           </div>
         </Panel>
