@@ -2,6 +2,7 @@
   "name": "agenttrader-market-ws",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.28.0",
   "description": "WebSocket worker for real-time market data → Upstash Redis",
   "scripts": {
     "start": "tsx index.ts",

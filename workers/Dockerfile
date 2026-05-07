@@ -2,8 +2,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install a pnpm version that is compatible with Node 20
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 # Copy package files
 COPY package.json pnpm-lock.yaml* ./
