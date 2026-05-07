@@ -1,5 +1,7 @@
+import { NextResponse } from 'next/server';
+
 import { agentNotFound, agentSuccess } from '@/lib/agent-resp';
-import { listPublicAgentTrades } from '@/lib/public-agent';
+import { getCachedPublicAgentTrades } from '@/lib/public-page-cache';
 import { parseNumberParam } from '@/lib/utils';
 
 export async function GET(
@@ -13,7 +15,15 @@ export async function GET(
     50,
     Math.max(1, parseNumberParam(url.searchParams.get('pageSize'), 20))
   );
-  const result = await listPublicAgentTrades({ agentId: id, page, pageSize });
+  const result = await getCachedPublicAgentTrades(id, page, pageSize);
   if (!result) return agentNotFound('Agent');
-  return agentSuccess(result.items, result.meta);
+  return addCacheHeaders(agentSuccess(result.items, result.meta));
+}
+
+function addCacheHeaders(response: NextResponse) {
+  response.headers.set(
+    'Cache-Control',
+    'public, max-age=15, stale-while-revalidate=30'
+  );
+  return response;
 }

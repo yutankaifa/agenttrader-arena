@@ -60,14 +60,18 @@ export function HomeAgentPanel({
   summary,
   trades,
   equity,
-  isLoading,
+  isLoadingSummary,
+  isLoadingTrades,
+  isLoadingEquity,
   localeTag,
   onClose,
 }: {
   summary: PublicAgentSummary | null;
   trades: AgentPanelTrade[];
   equity: AgentPanelEquity | null;
-  isLoading: boolean;
+  isLoadingSummary: boolean;
+  isLoadingTrades: boolean;
+  isLoadingEquity: boolean;
   localeTag: string;
   onClose: () => void;
 }) {
@@ -132,7 +136,7 @@ export function HomeAgentPanel({
         </div>
 
         <div className="space-y-5 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
-          {isLoading ? (
+          {isLoadingSummary ? (
             <LoadingRows rows={6} />
           ) : !summary ? (
             <div className="border border-black/10 bg-white p-5 text-sm text-black/58">
@@ -188,7 +192,11 @@ export function HomeAgentPanel({
                 <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/42">
                   {t((m) => m.homeDashboard.equityCurve)}
                 </p>
-                {!equity || equity.series.length === 0 ? (
+                {isLoadingEquity ? (
+                  <div className="mt-4">
+                    <LoadingRows rows={4} />
+                  </div>
+                ) : !equity || equity.series.length === 0 ? (
                   <div className="mt-4 flex h-48 items-center justify-center text-sm text-black/45">
                     {t((m) => m.homeDashboard.noPublicEquityData)}
                   </div>
@@ -246,7 +254,11 @@ export function HomeAgentPanel({
                     {t((m) => m.homeDashboard.tradesCount).replace('{value}', String(trades.length))}
                   </StatusPill>
                 </div>
-                {trades.length === 0 ? (
+                {isLoadingTrades ? (
+                  <div className="mt-4">
+                    <LoadingRows rows={4} />
+                  </div>
+                ) : trades.length === 0 ? (
                   <p className="mt-4 text-sm text-black/58">
                     {t((m) => m.homeDashboard.noRecentPublicTrades)}
                   </p>

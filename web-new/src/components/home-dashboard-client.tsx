@@ -292,9 +292,12 @@ export function HomeDashboardClient({
   );
   const [agentPanelTrades, setAgentPanelTrades] = useState<AgentPanelTrade[]>([]);
   const [agentPanelEquity, setAgentPanelEquity] = useState<AgentPanelEquity | null>(null);
-  const [agentPanelLoading, setAgentPanelLoading] = useState(false);
+  const [agentPanelSummaryLoading, setAgentPanelSummaryLoading] = useState(false);
+  const [agentPanelTradesLoading, setAgentPanelTradesLoading] = useState(false);
+  const [agentPanelEquityLoading, setAgentPanelEquityLoading] = useState(false);
   const hasSkippedInitialTopAgentRefresh = useRef(false);
   const [initialNowMs] = useState(() => Date.now());
+  const agentPanelRequestIdRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -783,37 +786,82 @@ export function HomeDashboardClient({
   ];
 
   const handleOpenAgentPanel = async (agentId: string) => {
+    const requestId = agentPanelRequestIdRef.current + 1;
+    agentPanelRequestIdRef.current = requestId;
+
     setSelectedAgentId(agentId);
-    setAgentPanelLoading(true);
+    setAgentPanelSummary(null);
+    setAgentPanelTrades([]);
+    setAgentPanelEquity(null);
+    setAgentPanelSummaryLoading(true);
+    setAgentPanelTradesLoading(true);
+    setAgentPanelEquityLoading(true);
 
     try {
       const timeZone = US_MARKET_TIME_ZONE;
-      const [summaryJson, tradesJson, equityJson] = await Promise.all([
-        fetchJson(
-          `/api/public/agents/${agentId}/summary?tz=${encodeURIComponent(timeZone)}&locale=${encodeURIComponent(localeTag)}`
-        ),
-        fetchJson(`/api/public/agents/${agentId}/trades?page=1&pageSize=8`),
-        fetchJson(`/api/public/agents/${agentId}/equity?range=7d`),
-      ]);
+      void fetchJson(
+        `/api/public/agents/${agentId}/summary?tz=${encodeURIComponent(timeZone)}&locale=${encodeURIComponent(localeTag)}`
+      )
+        .then((summaryJson) => {
+          if (agentPanelRequestIdRef.current !== requestId) return;
+          setAgentPanelSummary(summaryJson?.success ? summaryJson.data : null);
+        })
+        .catch(() => {
+          if (agentPanelRequestIdRef.current !== requestId) return;
+          setAgentPanelSummary(null);
+        })
+        .finally(() => {
+          if (agentPanelRequestIdRef.current !== requestId) return;
+          setAgentPanelSummaryLoading(false);
+        });
 
-      setAgentPanelSummary(summaryJson?.success ? summaryJson.data : null);
-      setAgentPanelTrades(tradesJson?.success ? tradesJson.data || [] : []);
-      setAgentPanelEquity(equityJson?.success ? equityJson.data || null : null);
+      void fetchJson(`/api/public/agents/${agentId}/trades?page=1&pageSize=8`)
+        .then((tradesJson) => {
+          if (agentPanelRequestIdRef.current !== requestId) return;
+          setAgentPanelTrades(tradesJson?.success ? tradesJson.data || [] : []);
+        })
+        .catch(() => {
+          if (agentPanelRequestIdRef.current !== requestId) return;
+          setAgentPanelTrades([]);
+        })
+        .finally(() => {
+          if (agentPanelRequestIdRef.current !== requestId) return;
+          setAgentPanelTradesLoading(false);
+        });
+
+      void fetchJson(`/api/public/agents/${agentId}/equity?range=7d`)
+        .then((equityJson) => {
+          if (agentPanelRequestIdRef.current !== requestId) return;
+          setAgentPanelEquity(equityJson?.success ? equityJson.data || null : null);
+        })
+        .catch(() => {
+          if (agentPanelRequestIdRef.current !== requestId) return;
+          setAgentPanelEquity(null);
+        })
+        .finally(() => {
+          if (agentPanelRequestIdRef.current !== requestId) return;
+          setAgentPanelEquityLoading(false);
+        });
     } catch {
+      if (agentPanelRequestIdRef.current !== requestId) return;
       setAgentPanelSummary(null);
       setAgentPanelTrades([]);
       setAgentPanelEquity(null);
-    } finally {
-      setAgentPanelLoading(false);
+      setAgentPanelSummaryLoading(false);
+      setAgentPanelTradesLoading(false);
+      setAgentPanelEquityLoading(false);
     }
   };
 
   const closeAgentPanel = () => {
+    agentPanelRequestIdRef.current += 1;
     setSelectedAgentId(null);
     setAgentPanelSummary(null);
     setAgentPanelTrades([]);
     setAgentPanelEquity(null);
-    setAgentPanelLoading(false);
+    setAgentPanelSummaryLoading(false);
+    setAgentPanelTradesLoading(false);
+    setAgentPanelEquityLoading(false);
   };
 
   const handleLeaderboardSort = (key: LeaderboardSortKey) => {
@@ -1434,7 +1482,9 @@ export function HomeDashboardClient({
           summary={agentPanelSummary}
           trades={agentPanelTrades}
           equity={agentPanelEquity}
-          isLoading={agentPanelLoading}
+          isLoadingSummary={agentPanelSummaryLoading}
+          isLoadingTrades={agentPanelTradesLoading}
+          isLoadingEquity={agentPanelEquityLoading}
           localeTag={localeTag}
           onClose={closeAgentPanel}
         />

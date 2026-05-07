@@ -168,6 +168,8 @@ type TradesMeta = {
   totalPages: number;
 };
 
+type AgentViewMode = 'public' | 'owned';
+
 const ranges: Range[] = ['5m', '15m', '1h', '4h', '1d', 'all'];
 
 export function PublicAgentPageClient({ agentId }: { agentId: string }) {
@@ -182,12 +184,15 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
     pageSize: 10,
     totalPages: 0,
   });
+  const [viewMode, setViewMode] = useState<AgentViewMode | null>(null);
   const [tradeRouteBase, setTradeRouteBase] = useState<string | null>(null);
   const [equity, setEquity] = useState<PublicEquityData | null>(null);
   const [range, setRange] = useState<Range>('1d');
   const [tradePage, setTradePage] = useState(1);
   const [downloadingTrades, setDownloadingTrades] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [tradesLoading, setTradesLoading] = useState(true);
+  const [equityLoading, setEquityLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const locale = localeTag;
 
@@ -198,71 +203,58 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
-      setLoading(true);
+    async function loadSummary() {
+      setSummaryLoading(true);
       setError(null);
+      setSummary(null);
+      setPositions([]);
+      setTrades([]);
+      setEquity(null);
+      setViewMode(null);
+      setTradeRouteBase(null);
+      setTradesMeta({
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 0,
+      });
+      setTradesLoading(true);
+      setEquityLoading(true);
 
       try {
         const timeZone = US_MARKET_TIME_ZONE;
-        const [summaryRes, positionsRes, tradesRes, equityRes] = await Promise.all([
+        const [summaryRes, positionsRes] = await Promise.all([
           fetch(
             `/api/public/agents/${agentId}/summary?tz=${encodeURIComponent(timeZone)}&locale=${encodeURIComponent(locale)}`,
             { cache: 'no-store' }
           ),
           fetch(`/api/public/agents/${agentId}/positions`, { cache: 'no-store' }),
-          fetch(`/api/public/agents/${agentId}/trades?page=${tradePage}&pageSize=10`, {
-            cache: 'no-store',
-          }),
-          fetch(`/api/public/agents/${agentId}/equity?range=${range}`, {
-            cache: 'no-store',
-          }),
         ]);
 
-        const [summaryJson, positionsJson, tradesJson, equityJson] = await Promise.all([
+        const [summaryJson, positionsJson] = await Promise.all([
           summaryRes.json(),
           positionsRes.json(),
-          tradesRes.json(),
-          equityRes.json(),
         ]);
 
         if (cancelled) return;
 
         if (summaryJson?.success) {
+          setViewMode('public');
           setSummary(summaryJson.data);
           setPositions(positionsJson?.success ? positionsJson.data || [] : []);
-          setTrades(tradesJson?.success ? tradesJson.data || [] : []);
-          setTradesMeta(
-            tradesJson?.meta ?? {
-              total: 0,
-              page: tradePage,
-              pageSize: 10,
-              totalPages: 0,
-            }
-          );
           setTradeRouteBase(`/api/public/agents/${agentId}/trades`);
-          setEquity(equityJson?.success ? equityJson.data || null : null);
           return;
         }
 
-        const [ownedSummaryRes, ownedPositionsRes, ownedTradesRes, ownedEquityRes] =
-          await Promise.all([
-            fetch(`/api/agents/${agentId}/summary`, { cache: 'no-store' }),
-            fetch(`/api/agents/${agentId}/positions`, { cache: 'no-store' }),
-            fetch(`/api/agents/${agentId}/trades?page=${tradePage}&pageSize=10`, {
-              cache: 'no-store',
-            }),
-            fetch(`/api/agents/${agentId}/equity?range=${range}`, {
-              cache: 'no-store',
-            }),
-          ]);
+        const [ownedSummaryRes, ownedPositionsRes] = await Promise.all([
+          fetch(`/api/agents/${agentId}/summary`, { cache: 'no-store' }),
+          fetch(`/api/agents/${agentId}/positions`, { cache: 'no-store' }),
+        ]);
 
-        const [ownedSummaryJson, ownedPositionsJson, ownedTradesJson, ownedEquityJson] =
-          await Promise.all([
-            ownedSummaryRes.json(),
-            ownedPositionsRes.json(),
-            ownedTradesRes.json(),
-            ownedEquityRes.json(),
-          ]);
+        const [ownedSummaryJson, ownedPositionsJson] = await Promise.all([
+          ownedSummaryRes.json(),
+          ownedPositionsRes.json(),
+        ]);
 
         if (cancelled) return;
 
@@ -276,24 +268,12 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         const ownedPositions = (ownedPositionsJson?.success
           ? ownedPositionsJson.data || []
           : []) as OwnedPosition[];
-        const ownedTrades = (ownedTradesJson?.success
-          ? ownedTradesJson.data || []
-          : []) as OwnedTrade[];
         const mappedOwnedPositions = ownedPositions.map(mapOwnedPositionToPublic);
 
+        setViewMode('owned');
         setSummary(mapOwnedSummaryToPublic(ownedSummary, mappedOwnedPositions, t));
         setPositions(mappedOwnedPositions);
-        setTrades(ownedTrades.map(mapOwnedTradeToPublic));
-        setTradesMeta(
-          ownedTradesJson?.meta ?? {
-            total: 0,
-            page: tradePage,
-            pageSize: 10,
-            totalPages: 0,
-          }
-        );
         setTradeRouteBase(`/api/agents/${agentId}/trades`);
-        setEquity(ownedEquityJson?.success ? ownedEquityJson.data || null : null);
       } catch {
         if (!cancelled) {
           setError(t((m) => m.publicAgent.failed));
@@ -301,18 +281,112 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         }
       } finally {
         if (!cancelled) {
-          setLoading(false);
+          setSummaryLoading(false);
         }
       }
     }
 
-    void load();
+    void loadSummary();
     return () => {
       cancelled = true;
     };
-  }, [agentId, locale, range, t, tradePage]);
+  }, [agentId, locale, t]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!viewMode) {
+      return;
+    }
+
+    let cancelled = false;
+    setTradesLoading(true);
+
+    async function loadTrades() {
+      try {
+        const routeBase =
+          viewMode === 'public' ? `/api/public/agents/${agentId}/trades` : `/api/agents/${agentId}/trades`;
+        const response = await fetch(`${routeBase}?page=${tradePage}&pageSize=10`, {
+          cache: 'no-store',
+        });
+        const tradesJson = await response.json();
+
+        if (cancelled) return;
+
+        if (viewMode === 'public') {
+          setTrades(tradesJson?.success ? tradesJson.data || [] : []);
+        } else {
+          const ownedTrades = (tradesJson?.success ? tradesJson.data || [] : []) as OwnedTrade[];
+          setTrades(ownedTrades.map(mapOwnedTradeToPublic));
+        }
+
+        setTradesMeta(
+          tradesJson?.meta ?? {
+            total: 0,
+            page: tradePage,
+            pageSize: 10,
+            totalPages: 0,
+          }
+        );
+      } catch {
+        if (!cancelled) {
+          setTrades([]);
+          setTradesMeta({
+            total: 0,
+            page: tradePage,
+            pageSize: 10,
+            totalPages: 0,
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setTradesLoading(false);
+        }
+      }
+    }
+
+    void loadTrades();
+    return () => {
+      cancelled = true;
+    };
+  }, [agentId, tradePage, viewMode]);
+
+  useEffect(() => {
+    if (!viewMode) {
+      return;
+    }
+
+    let cancelled = false;
+    setEquityLoading(true);
+
+    async function loadEquity() {
+      try {
+        const routeBase =
+          viewMode === 'public' ? `/api/public/agents/${agentId}/equity` : `/api/agents/${agentId}/equity`;
+        const response = await fetch(`${routeBase}?range=${range}`, {
+          cache: 'no-store',
+        });
+        const equityJson = await response.json();
+
+        if (cancelled) return;
+
+        setEquity(equityJson?.success ? equityJson.data || null : null);
+      } catch {
+        if (!cancelled) {
+          setEquity(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setEquityLoading(false);
+        }
+      }
+    }
+
+    void loadEquity();
+    return () => {
+      cancelled = true;
+    };
+  }, [agentId, range, viewMode]);
+
+  if (summaryLoading) {
     return (
       <div className="mx-auto max-w-7xl pt-20 md:pt-24 px-6 py-16">
         <div className="animate-pulse space-y-6">
@@ -574,7 +648,18 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
           </div>
 
           <div className="mt-5">
-            <EquityBars series={safeEquity.series} locale={locale} />
+            {equityLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map((item) => (
+                  <div
+                    key={item}
+                    className="h-12 animate-pulse border border-black/10 bg-[#faf8f3]"
+                  />
+                ))}
+              </div>
+            ) : (
+              <EquityBars series={safeEquity.series} locale={locale} />
+            )}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-6 text-sm text-black/62">
@@ -723,7 +808,16 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
           </div>
 
           <div className="mt-4">
-          {trades.length === 0 ? (
+          {tradesLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="h-36 animate-pulse rounded-xl border border-black/10 bg-[#faf8f3]"
+                />
+              ))}
+            </div>
+          ) : trades.length === 0 ? (
             <div className="py-12 text-center text-sm text-black/55">{t((m) => m.publicAgent.noTrades)}</div>
           ) : (
             <div className="space-y-3">
