@@ -2,13 +2,14 @@ import { headers } from 'next/headers';
 
 import { HomeDashboardClient } from '@/components/home-dashboard-client';
 import { envConfigs } from '@/lib/env';
-import { buildPublicAgentSummary, listPublicAgentPositions } from '@/lib/public-agent';
 import {
-  getPublicHomeOverview,
-  getPublicLeaderboard,
-  getPublicLiveTrades,
-  getPublicStats,
-} from '@/lib/public-market';
+  getCachedPublicAgentPositions,
+  getCachedPublicAgentSummary,
+  getCachedPublicHomeOverview,
+  getCachedPublicLeaderboard,
+  getCachedPublicLiveTrades,
+  getCachedPublicStats,
+} from '@/lib/public-page-cache';
 
 type PublicStats = {
   agents: number;
@@ -108,44 +109,17 @@ type PublicHomeOverview = {
     | null;
 };
 
-type PublicAgentSummary = {
-  agent: {
-    primaryMarket: string | null;
-  };
-  positionsOverview: {
-    grossMarketValue: number;
-  };
-  dailySummary: {
-    summary: string;
-  };
-};
-
-type PublicPosition = {
-  id: string;
-  symbol: string;
-  market: string;
-  outcomeName?: string | null;
-  positionSize: number | null;
-  avgPrice: number | null;
-  marketPrice: number | null;
-  marketValue: number | null;
-  unrealizedPnl: number | null;
-  updatedAt?: string | null;
-};
-
 export default async function HomePage() {
   const requestHeaders = await headers();
-  const initialNowMs = Date.now();
   const skillUrl = `${envConfigs.appUrl.replace(/\/$/, '')}/skill.md`;
   const summaryLocale = getRequestLocale(requestHeaders.get('accept-language'));
   const summaryTimeZone = requestHeaders.get('x-timezone') || 'UTC';
 
-  const [stats, homeOverview, leaderboard, liveTrades, leaderSnapshot] = await Promise.all([
-    getPublicStats().catch(() => null),
-    getPublicHomeOverview().catch(() => null),
-    getPublicLeaderboard({ page: 1, pageSize: 10 }).catch(() => null),
-    getPublicLiveTrades({ page: 1, pageSize: 50 }).catch(() => null),
-    getPublicLeaderboard({ page: 1, pageSize: 2 }).catch(() => null),
+  const [stats, homeOverview, leaderboard, liveTrades] = await Promise.all([
+    getCachedPublicStats().catch(() => null),
+    getCachedPublicHomeOverview().catch(() => null),
+    getCachedPublicLeaderboard(1, 10).catch(() => null),
+    getCachedPublicLiveTrades(1, 50).catch(() => null),
   ]);
 
   const safeStats: PublicStats = stats ?? {
@@ -172,10 +146,9 @@ export default async function HomePage() {
   const safeLiveTrades: PublicLiveTradesData = liveTrades ?? {
     items: [],
   };
-  const safeLeaderSnapshot: PublicLeaderboardData = leaderSnapshot ?? {
-    items: [],
-    snapshotAt: null,
-    total: 0,
+  const safeLeaderSnapshot: PublicLeaderboardData = {
+    ...safeLeaderboard,
+    items: safeLeaderboard.items.slice(0, 2),
     page: 1,
     pageSize: 2,
     totalPages: 1,
@@ -184,19 +157,16 @@ export default async function HomePage() {
   const leader = safeLeaderSnapshot.items[0] ?? safeLeaderboard.items[0] ?? null;
   const [topAgentSummary, topAgentPositions] = leader
     ? await Promise.all([
-        buildPublicAgentSummary({
-          agentId: leader.agentId,
-          locale: summaryLocale,
-          timeZone: summaryTimeZone,
-        }).catch(() => null),
-        listPublicAgentPositions(leader.agentId).catch(() => null),
+        getCachedPublicAgentSummary(leader.agentId, summaryLocale, summaryTimeZone).catch(
+          () => null
+        ),
+        getCachedPublicAgentPositions(leader.agentId).catch(() => null),
       ])
     : [null, null];
 
   return (
     <HomeDashboardClient
       skillUrl={skillUrl}
-      initialNowMs={initialNowMs}
       initialStats={safeStats}
       initialHomeOverview={safeHomeOverview}
       initialLeaderboard={safeLeaderboard}

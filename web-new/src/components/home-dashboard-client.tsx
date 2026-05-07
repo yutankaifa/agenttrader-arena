@@ -1,14 +1,21 @@
 'use client';
 
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
-import { EquityBars } from '@/components/equity-bars';
 import { HomeSkillCard } from '@/components/home-skill-card';
 import { useSiteLocale } from '@/components/site-locale-provider';
 import { cn } from '@/lib/cn';
 import { formatUsMarketDateTime } from '@/lib/us-market-time';
 import { US_MARKET_TIME_ZONE } from '@/lib/us-stock-market-core';
+
+const HomeAgentPanel = dynamic(
+  () => import('@/components/home-agent-panel').then((mod) => mod.HomeAgentPanel),
+  {
+    loading: () => <AgentPanelLoadingShell />,
+  }
+);
 
 type PublicStats = {
   agents: number;
@@ -216,7 +223,6 @@ const SNAPSHOT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export function HomeDashboardClient({
   skillUrl,
-  initialNowMs,
   initialStats,
   initialHomeOverview,
   initialLeaderboard,
@@ -226,7 +232,6 @@ export function HomeDashboardClient({
   initialTopAgentPositions,
 }: {
   skillUrl: string;
-  initialNowMs: number;
   initialStats: PublicStats;
   initialHomeOverview: PublicHomeOverview;
   initialLeaderboard: PublicLeaderboardData;
@@ -288,6 +293,8 @@ export function HomeDashboardClient({
   const [agentPanelTrades, setAgentPanelTrades] = useState<AgentPanelTrade[]>([]);
   const [agentPanelEquity, setAgentPanelEquity] = useState<AgentPanelEquity | null>(null);
   const [agentPanelLoading, setAgentPanelLoading] = useState(false);
+  const hasSkippedInitialTopAgentRefresh = useRef(false);
+  const [initialNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     let cancelled = false;
@@ -415,8 +422,6 @@ export function HomeDashboardClient({
       void refreshHomeOverview();
     };
 
-    refreshAll();
-
     const statsTimer = window.setInterval(refreshStats, STATS_REFRESH_MS);
     const leaderboardTimer = window.setInterval(
       refreshLeaderboard,
@@ -453,6 +458,11 @@ export function HomeDashboardClient({
       setTopAgentSummary(null);
       setTopAgentPositions([]);
       setTopAgentLoading(false);
+      return;
+    }
+
+    if (!hasSkippedInitialTopAgentRefresh.current) {
+      hasSkippedInitialTopAgentRefresh.current = true;
       return;
     }
 
@@ -1420,239 +1430,29 @@ export function HomeDashboardClient({
       </main>
 
       {selectedAgentId ? (
-        <div className="fixed inset-0 z-50">
-          <button
-            aria-label={t((m) => m.homeDashboard.closePanel)}
-            className="absolute inset-0 bg-black/28"
-            onClick={closeAgentPanel}
-            type="button"
-          />
-          <div className="absolute inset-y-0 right-0 w-full max-w-[560px] overflow-y-auto border-l border-black/10 bg-[#f6f6f3] shadow-[-10px_0_40px_rgba(0,0,0,0.08)]">
-            <div className="sticky top-0 z-10 border-b border-black/10 bg-[#f6f6f3]/95 px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/42">
-                    {t((m) => m.homeDashboard.agentProfile)}
-                  </p>
-                  <div className="mt-3 flex items-start gap-4 pr-10">
-                    <AgentAvatar
-                      name={agentPanelSummary?.agent.name || 'A'}
-                      avatarUrl={agentPanelSummary?.agent.avatarUrl}
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-start gap-3">
-                        <h3 className="truncate text-2xl tracking-[-0.05em] text-[#171717]">
-                          {agentPanelSummary?.agent.name || t((m) => m.homeDashboard.loading)}
-                        </h3>
-                        {agentPanelSummary?.performance?.rank &&
-                        agentPanelSummary.performance.rank <= 3 ? (
-                          <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-[#d6ab36] text-[11px] font-semibold text-white">
-                            {agentPanelSummary.performance.rank}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {agentPanelSummary?.performance?.rank ? (
-                          <StatusPill>
-                            {t((m) => m.homeDashboard.rankLabel).replace(
-                              '{value}',
-                              String(agentPanelSummary.performance.rank)
-                            )}
-                          </StatusPill>
-                        ) : null}
-                        {agentPanelSummary?.agent.primaryMarket ? (
-                          <StatusPill>
-                            {formatMarketName(agentPanelSummary.agent.primaryMarket, t)}
-                          </StatusPill>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-black/56 sm:leading-7">
-                    {agentPanelSummary?.agent.description ||
-                      t((m) => m.homeDashboard.panelDescriptionFallback)}
-                  </p>
-                </div>
-                <button
-                  aria-label={t((m) => m.homeDashboard.closePanel)}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-xl leading-none text-[#171717] transition hover:bg-[#171717] hover:text-white"
-                  onClick={closeAgentPanel}
-                  type="button"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-5 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
-              {agentPanelLoading ? (
-                <LoadingRows rows={6} />
-              ) : !agentPanelSummary ? (
-                <div className="border border-black/10 bg-white p-5 text-sm text-black/58">
-                  {t((m) => m.homeDashboard.unableToLoadProfile)}
-                </div>
-              ) : (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {[
-                      {
-                        label: t((m) => m.homeDashboard.currentRank),
-                        value: agentPanelSummary.performance?.rank
-                          ? `#${agentPanelSummary.performance.rank}`
-                          : '--',
-                      },
-                      {
-                        label: t((m) => m.homeDashboard.cumulativeReturn),
-                        value: formatPercent(agentPanelSummary.performance?.returnRate, localeTag),
-                      },
-                      {
-                        label: t((m) => m.homeDashboard.totalEquity),
-                        value: formatCompactUsd(agentPanelSummary.performance?.totalEquity, localeTag),
-                      },
-                      {
-                        label: t((m) => m.homeDashboard.maxDd),
-                        value:
-                          agentPanelSummary.performance?.drawdown != null
-                            ? formatPercent(agentPanelSummary.performance.drawdown, localeTag)
-                            : '--',
-                      },
-                    ].map((metric) => (
-                      <div key={metric.label} className="border border-black/10 bg-white p-4">
-                        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/42">
-                          {metric.label}
-                        </p>
-                        <p className="mt-3 text-xl font-semibold tracking-[-0.04em] text-[#171717]">
-                          {metric.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <MetricCard
-                      label={t((m) => m.homeDashboard.model)}
-                      value={formatModelName(agentPanelSummary.agent.modelName, t)}
-                    />
-                    <MetricCard
-                      label={t((m) => m.homeDashboard.market)}
-                      value={formatMarketName(agentPanelSummary.agent.primaryMarket, t)}
-                    />
-                  </div>
-
-                  <div className="border border-black/10 bg-white p-5">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/42">
-                      {t((m) => m.homeDashboard.equityCurve)}
-                    </p>
-                    {!agentPanelEquity || agentPanelEquity.series.length === 0 ? (
-                      <div className="mt-4 flex h-48 items-center justify-center text-sm text-black/45">
-                        {t((m) => m.homeDashboard.noPublicEquityData)}
-                      </div>
-                    ) : (
-                      <div className="mt-4">
-                        <EquityBars series={agentPanelEquity.series} locale={localeTag} />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="border border-black/10 bg-white p-5">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/42">
-                      {t((m) => m.homeDashboard.profile)}
-                    </p>
-                    <div className="mt-4 space-y-3 text-sm leading-7 text-black/58">
-                      <p>
-                        {t((m) => m.homeDashboard.model)}:{' '}
-                        {formatModelName(agentPanelSummary.agent.modelName, t)}
-                      </p>
-                      <p>
-                        {t((m) => m.homeDashboard.markets)}:{' '}
-                        {formatPreferences(agentPanelSummary.agent.marketPreferences, t)}
-                      </p>
-                      <p>
-                        {t((m) => m.homeDashboard.visibleExposure)}:{' '}
-                        {formatCompactUsd(agentPanelSummary.positionsOverview.grossMarketValue, localeTag)}
-                      </p>
-                      <p>
-                        {t((m) => m.homeDashboard.openPositions)}:{' '}
-                        {agentPanelSummary.positionsOverview.openPositions ?? '--'}
-                      </p>
-                      {agentPanelSummary.agent.lastHeartbeatAt ? (
-                        <p>
-                          {t((m) => m.homeDashboard.lastHeartbeat)}:{' '}
-                          {formatTime(agentPanelSummary.agent.lastHeartbeatAt, localeTag)}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {agentPanelSummary.dailySummary?.summary ? (
-                    <div className="border border-black/10 bg-white p-5">
-                      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/42">
-                        {t((m) => m.homeDashboard.dailySummary)}
-                      </p>
-                      <p className="mt-4 text-sm leading-7 text-black/58">
-                        {agentPanelSummary.dailySummary.summary}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  <div className="border border-black/10 bg-white p-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/42">
-                        {t((m) => m.homeDashboard.tradeLog)}
-                      </p>
-                      <StatusPill>
-                        {t((m) => m.homeDashboard.tradesCount).replace(
-                          '{value}',
-                          String(agentPanelTrades.length)
-                        )}
-                      </StatusPill>
-                    </div>
-                    {agentPanelTrades.length === 0 ? (
-                      <p className="mt-4 text-sm text-black/58">
-                        {t((m) => m.homeDashboard.noRecentPublicTrades)}
-                      </p>
-                    ) : (
-                      <div className="mt-4 divide-y divide-black/10 border border-black/10">
-                        {agentPanelTrades.map((trade) => (
-                          <div key={trade.executionId} className="space-y-3 px-4 py-4">
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-black/38">
-                                {formatTime(trade.executedAt, localeTag)}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[15px] font-semibold tracking-[-0.01em] text-[#171717]">
-                              <span className={cn('lowercase', getTradeTone(trade.side))}>
-                                {formatTradeSideLabel(trade.side, t, 'lower')}
-                              </span>
-                              <span>
-                                {trade.outcomeName
-                                  ? `${trade.symbol} · ${trade.outcomeName}`
-                                  : trade.symbol}
-                              </span>
-                              <span>
-                                {formatCompactUsd(trade.filledUnits * trade.fillPrice, localeTag)}
-                                {trade.fillPrice != null
-                                  ? ` at ${formatTradeExecutionPrice(trade.fillPrice, trade.market ?? null, localeTag)}`
-                                  : ''}
-                              </span>
-                            </div>
-                            <p className="border-l border-black/12 pl-4 text-sm leading-7 text-black/58">
-                              {trade.displayRationale ||
-                                trade.reasonTag ||
-                                t((m) => m.homeDashboard.noPublicTradeRationale)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <HomeAgentPanel
+          summary={agentPanelSummary}
+          trades={agentPanelTrades}
+          equity={agentPanelEquity}
+          isLoading={agentPanelLoading}
+          localeTag={localeTag}
+          onClose={closeAgentPanel}
+        />
       ) : null}
     </>
+  );
+}
+
+function AgentPanelLoadingShell() {
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/28" />
+      <div className="absolute inset-y-0 right-0 w-full max-w-[560px] overflow-y-auto border-l border-black/10 bg-[#f6f6f3] shadow-[-10px_0_40px_rgba(0,0,0,0.08)]">
+        <div className="space-y-5 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
+          <LoadingRows rows={8} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1999,29 +1799,6 @@ function SnapshotCard({ card }: { card: SnapshotCardData }) {
   );
 }
 
-function AgentAvatar({
-  name,
-  avatarUrl,
-}: {
-  name: string;
-  avatarUrl?: string | null;
-}) {
-  if (avatarUrl) {
-    return (
-      <div className="relative flex size-12 shrink-0 overflow-hidden rounded-full border border-black/10 bg-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={avatarUrl} alt={name} className="h-full w-full object-cover" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex size-12 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white text-sm font-semibold text-[#171717]">
-      {name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
-
 function StatusPill({
   children,
   tone = 'default',
@@ -2040,17 +1817,6 @@ function StatusPill({
     >
       {children}
     </span>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border border-black/10 bg-white p-4">
-      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-black/42">
-        {label}
-      </p>
-      <p className="mt-3 text-sm font-semibold text-[#171717]">{value}</p>
-    </div>
   );
 }
 
@@ -2193,26 +1959,6 @@ function formatWeight(value: number | null | undefined, localeTag: string) {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   }).format(value)}%`;
-}
-
-function formatPreferences(
-  value: string[] | string | null | undefined,
-  t: ReturnType<typeof useSiteLocale>['t']
-) {
-  if (!value) return '--';
-  if (Array.isArray(value)) {
-    return value.length ? value.map((item) => formatMarketName(item, t)).join(', ') : '--';
-  }
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) && parsed.length
-      ? parsed
-          .map((item) => (typeof item === 'string' ? formatMarketName(item, t) : item))
-          .join(', ')
-      : '--';
-  } catch {
-    return value;
-  }
 }
 
 function formatQuantity(value: number | null | undefined, localeTag: string) {

@@ -251,10 +251,6 @@ export async function getPublicHomeOverviewFromDatabase() {
   await ensureAgentAvatarUrlColumn();
   await ensureTradeExecutionQuoteSourceColumn();
   const sql = getSqlClient();
-  const leaderboard = await getPublicLeaderboardFromDatabase({
-    page: 1,
-    pageSize: 500,
-  });
 
   const now = new Date();
   const startOfLast24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);

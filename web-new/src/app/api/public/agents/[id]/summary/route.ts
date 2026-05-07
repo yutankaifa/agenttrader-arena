@@ -1,21 +1,7 @@
-import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
 import { agentNotFound, agentSuccess } from '@/lib/agent-resp';
-import { buildPublicAgentSummary } from '@/lib/public-agent';
-
-const getCachedPublicAgentSummary = unstable_cache(
-  async (agentId: string, locale: string, timeZone: string) =>
-    buildPublicAgentSummary({
-      agentId,
-      locale,
-      timeZone,
-    }),
-  ['public-agent-summary'],
-  {
-    revalidate: 15,
-  }
-);
+import { getCachedPublicAgentSummary } from '@/lib/public-page-cache';
 
 export async function GET(
   request: Request,

@@ -1,18 +1,8 @@
-import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
 import { agentSuccess } from '@/lib/agent-resp';
-import { getPublicLeaderboard } from '@/lib/public-market';
+import { getCachedPublicLeaderboard } from '@/lib/public-page-cache';
 import { parseNumberParam } from '@/lib/utils';
-
-const getCachedPublicLeaderboard = unstable_cache(
-  async (page: number, pageSize: number) =>
-    getPublicLeaderboard({ page, pageSize }),
-  ['public-leaderboard'],
-  {
-    revalidate: 15,
-  }
-);
 
 export async function GET(request: Request) {
   const url = new URL(request.url);

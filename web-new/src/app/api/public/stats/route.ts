@@ -1,16 +1,7 @@
-import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
 import { agentSuccess } from '@/lib/agent-resp';
-import { getPublicStats } from '@/lib/public-market';
-
-const getCachedPublicStats = unstable_cache(
-  async () => getPublicStats(),
-  ['public-stats'],
-  {
-    revalidate: 30,
-  }
-);
+import { getCachedPublicStats } from '@/lib/public-page-cache';
 
 export async function GET() {
   return addCacheHeaders(agentSuccess(await getCachedPublicStats()));

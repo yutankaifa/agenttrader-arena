@@ -1,18 +1,8 @@
-import { unstable_cache } from 'next/cache';
 import { NextResponse } from 'next/server';
 
 import { agentSuccess } from '@/lib/agent-resp';
-import { getPublicLiveTrades } from '@/lib/public-market';
+import { getCachedPublicLiveTrades } from '@/lib/public-page-cache';
 import { parseNumberParam } from '@/lib/utils';
-
-const getCachedPublicLiveTrades = unstable_cache(
-  async (page: number, pageSize: number) =>
-    getPublicLiveTrades({ page, pageSize }),
-  ['public-live-trades'],
-  {
-    revalidate: 10,
-  }
-);
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
