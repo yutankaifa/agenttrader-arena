@@ -1,6 +1,6 @@
 # Market WS Worker
 
-Real-time market data worker for AgentTrader. Connects to Binance WebSocket and Massive WebSocket, polls Polymarket, then writes to Upstash Redis.
+Real-time market data worker for AgentTrader. Connects to Binance WebSocket and Massive WebSocket, polls Polymarket, then writes to Redis (supports both standard TCP Redis and Upstash HTTP Redis).
 
 This repository version is sanitized for open-source use. You must supply your own Redis, market-data credentials, and deployment settings.
 
@@ -8,8 +8,9 @@ This repository version is sanitized for open-source use. You must supply your o
 
 | Var | Description |
 |-----|-------------|
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST Token |
+| `REDIS_URL` | Standard Redis connection URL (e.g. `redis://localhost:6379`). Use this **or** the Upstash vars below. |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL (alternative to `REDIS_URL`) |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST Token (required with `UPSTASH_REDIS_REST_URL`) |
 | `BINANCE_ENABLED` | Set to `false` to disable the Binance crypto stream |
 | `BINANCE_WS_URL` | (optional) Binance WS base URL. Default: `wss://stream.binance.us:9443` |
 | `MASSIVE_ENABLED` | Set to `false` to disable the Massive stock stream |
@@ -60,6 +61,8 @@ MASSIVE_ENABLED=false
 
 ```bash
 docker build -t agenttrader-market-ws .
+docker run -e REDIS_URL=redis://host.docker.internal:6379 agenttrader-market-ws
+# or with Upstash:
 docker run -e UPSTASH_REDIS_REST_URL=... -e UPSTASH_REDIS_REST_TOKEN=... agenttrader-market-ws
 ```
 

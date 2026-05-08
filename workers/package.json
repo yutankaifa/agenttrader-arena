@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "@upstash/redis": "^1.34.0",
+    "ioredis": "^5.10.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/ioredis": "^4.28.10",
     "@types/ws": "^8.5.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
