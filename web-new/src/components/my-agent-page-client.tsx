@@ -13,41 +13,6 @@ import {
 } from '@/lib/public-trade-meta';
 import { formatRelativeTimestamp } from '@/lib/relative-time';
 
-type OwnedAgentLogAction = {
-  actionId: string;
-  symbol: string | null;
-  objectId: string | null;
-  side: string | null;
-  requestedUnits: number | null;
-  amountUsd: number | null;
-  market: string | null;
-  orderType: string;
-  status: string;
-  rejectionReason: string | null;
-};
-
-type OwnedAgentLogEntry = {
-  submissionId: string;
-  decisionId: string;
-  decisionRationale: string | null;
-  fallbackReasoningSummary: string;
-  reasonTag: string;
-  status: string;
-  rejectionReason: string | null;
-  receivedAt: string | null;
-  actions: OwnedAgentLogAction[];
-};
-
-type AgentLogsResponse =
-  | {
-      success: true;
-      data: OwnedAgentLogEntry[];
-    }
-  | {
-      success: false;
-      data?: unknown;
-    };
-
 function StatusBadge({ status }: { status: string }) {
   const { t } = useSiteLocale();
   const colors: Record<string, string> = {
@@ -78,10 +43,6 @@ export function MyAgentPageClient() {
   );
   const [xLinkDraft, setXLinkDraft] = useState('');
   const [savingXLink, setSavingXLink] = useState(false);
-  const [agentLogsById, setAgentLogsById] = useState<
-    Record<string, OwnedAgentLogEntry[]>
-  >({});
-  const [logsLoadingById, setLogsLoadingById] = useState<Record<string, boolean>>({});
 
   const currencyFormatter = useMemo(
     () =>
@@ -89,6 +50,14 @@ export function MyAgentPageClient() {
         style: 'currency',
         currency: 'USD',
         maximumFractionDigits: 0,
+      }),
+    [localeTag]
+  );
+  const percentFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(localeTag, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }),
     [localeTag]
   );
@@ -104,52 +73,6 @@ export function MyAgentPageClient() {
       agents.find((agent) => typeof agent.xUrl === 'string' && agent.xUrl.trim())?.xUrl ?? '';
     setXLinkDraft(sharedXLink);
   }, [agents]);
-
-  useEffect(() => {
-    if (!session?.user || agents.length === 0) {
-      setAgentLogsById({});
-      setLogsLoadingById({});
-      return;
-    }
-
-    let cancelled = false;
-    setLogsLoadingById(
-      Object.fromEntries(agents.map((agent) => [agent.id, true])) as Record<string, boolean>
-    );
-
-    async function loadRecentLogs() {
-      const entries = await Promise.all(
-        agents.map(async (agent) => {
-          try {
-            const response = await fetch(`/api/agents/${agent.id}/logs?page=1&pageSize=3`, {
-              cache: 'no-store',
-            });
-            const payload = (await response.json()) as AgentLogsResponse;
-            const logs =
-              response.ok && payload.success && Array.isArray(payload.data)
-                ? payload.data
-                : [];
-            return [agent.id, logs] as const;
-          } catch {
-            return [agent.id, []] as const;
-          }
-        })
-      );
-
-      if (cancelled) {
-        return;
-      }
-
-      setAgentLogsById(Object.fromEntries(entries) as Record<string, OwnedAgentLogEntry[]>);
-      setLogsLoadingById({});
-    }
-
-    void loadRecentLogs();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [agents, session?.user]);
 
   async function runAgentAction(agentId: string, action: 'pause' | 'resume' | 'delete') {
     setPendingActionById((current) => ({ ...current, [agentId]: action }));
@@ -311,7 +234,7 @@ export function MyAgentPageClient() {
                 <div className="flex justify-between">
                   <span className="text-black/56">{t((m) => m.myAgent.equity)}</span>
                   <span className="font-medium text-[#171717]">
-                    {currencyFormatter.format(agent.totalEquity)}
+                    {currencyFormatter.format(agent.displayEquity)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -324,16 +247,13 @@ export function MyAgentPageClient() {
                   <span className="text-black/56">{t((m) => m.myAgent.return)}</span>
                   <span
                     className={
-                      agent.returnRate >= 0
+                      agent.displayReturnRate >= 0
                         ? 'font-semibold text-emerald-600'
                         : 'font-semibold text-red-600'
                     }
                   >
-                    {agent.returnRate >= 0 ? '+' : ''}
-                    {new Intl.NumberFormat(localeTag, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    }).format(agent.returnRate)}
+                    {agent.displayReturnRate >= 0 ? '+' : ''}
+                    {percentFormatter.format(agent.displayReturnRate)}
                     %
                   </span>
                 </div>
@@ -344,65 +264,6 @@ export function MyAgentPageClient() {
                       ? formatRelativeTimestamp(agent.lastHeartbeatAt, localeTag)
                       : t((m) => m.myAgent.noHeartbeat)}
                   </span>
-                </div>
-              </div>
-
-              <div className="mt-5 border-t border-black/10 pt-4">
-                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-black/42">
-                  {t((m) => m.myAgent.latestDecisions)}
-                </p>
-                <div className="mt-3 space-y-2">
-                  {logsLoadingById[agent.id] ? (
-                    <p className="text-sm text-black/56">{t((m) => m.myAgent.loadingDecisions)}</p>
-                  ) : (agentLogsById[agent.id] ?? []).length === 0 ? (
-                    <p className="text-sm text-black/56">{t((m) => m.myAgent.noDecisions)}</p>
-                  ) : (
-                    (agentLogsById[agent.id] ?? []).map((entry) => {
-                      const rejectionReason = getEntryRejectionReason(entry);
-
-                      return (
-                        <article
-                          key={entry.submissionId}
-                          className="rounded-lg border border-black/10 bg-[#fafafa] px-3 py-3"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <DecisionStatusBadge status={entry.status} />
-                              {entry.reasonTag ? (
-                                <span className="text-xs italic text-black/48">
-                                  {entry.reasonTag}
-                                </span>
-                              ) : null}
-                            </div>
-                            <span className="text-xs text-black/42">
-                              {entry.receivedAt
-                                ? formatRelativeTimestamp(entry.receivedAt, localeTag)
-                                : '--'}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm font-medium text-[#171717]">
-                            {formatLogHeadline(entry, t)}
-                          </p>
-                          <p className="mt-1 text-sm leading-6 text-black/58">
-                            {truncateText(
-                              entry.decisionRationale ||
-                                entry.fallbackReasoningSummary ||
-                                entry.reasonTag ||
-                                entry.decisionId,
-                              140
-                            )}
-                          </p>
-                          {rejectionReason ? (
-                            <p className="mt-2 text-sm text-red-700">
-                              {`${entry.status === 'rejected'
-                                ? t((m) => m.myAgent.rejectedBecause)
-                                : t((m) => m.myAgent.actionRejectedBecause)}: ${formatMachineReason(rejectionReason)}`}
-                            </p>
-                          ) : null}
-                        </article>
-                      );
-                    })
-                  )}
                 </div>
               </div>
 
@@ -473,74 +334,6 @@ function ToneBadge({
       {children}
     </span>
   );
-}
-
-function DecisionStatusBadge({ status }: { status: string }) {
-  const { t } = useSiteLocale();
-  const normalized = status.toLowerCase();
-  const tone =
-    normalized === 'accepted'
-      ? 'green'
-      : normalized === 'rejected'
-        ? 'red'
-        : 'amber';
-
-  return (
-    <ToneBadge tone={tone}>
-      {normalized === 'accepted'
-        ? t((m) => m.myAgent.statusAccepted)
-        : normalized === 'rejected'
-          ? t((m) => m.myAgent.statusRejected)
-          : t((m) => m.myAgent.statusPending)}
-    </ToneBadge>
-  );
-}
-
-function getEntryRejectionReason(entry: OwnedAgentLogEntry) {
-  if (entry.rejectionReason) {
-    return entry.rejectionReason;
-  }
-
-  return (
-    entry.actions.find(
-      (action) =>
-        typeof action.rejectionReason === 'string' && Boolean(action.rejectionReason)
-    )?.rejectionReason ?? null
-  );
-}
-
-function formatLogHeadline(
-  entry: OwnedAgentLogEntry,
-  t: ReturnType<typeof useSiteLocale>['t']
-) {
-  const primaryAction = entry.actions[0] ?? null;
-  if (!primaryAction) {
-    return entry.reasonTag || entry.decisionId;
-  }
-
-  const side =
-    primaryAction.side?.toLowerCase() === 'buy'
-      ? t((m) => m.homeDashboard.sideBuyUpper)
-      : primaryAction.side?.toLowerCase() === 'sell'
-        ? t((m) => m.homeDashboard.sideSellUpper)
-        : primaryAction.side?.toUpperCase() ?? 'ACTION';
-  const symbol =
-    primaryAction.symbol ?? primaryAction.objectId ?? entry.reasonTag ?? entry.decisionId;
-  const market = primaryAction.market ? ` | ${primaryAction.market}` : '';
-
-  return `${side} ${symbol}${market}`;
-}
-
-function formatMachineReason(reason: string) {
-  return reason.replace(/[_-]+/g, ' ').trim();
-}
-
-function truncateText(value: string, maxLength: number) {
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  return `${value.slice(0, maxLength - 3).trimEnd()}...`;
 }
 
 function getHeartbeatTone(timestamp: string | null) {

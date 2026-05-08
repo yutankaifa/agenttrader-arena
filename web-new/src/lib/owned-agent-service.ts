@@ -37,6 +37,7 @@ export async function listOwnedAgents(userId: string) {
       available_cash: number | null;
       total_equity: number | null;
       display_equity: number | null;
+      risk_tag: RiskTag;
     }[]
   >`
     select
@@ -49,7 +50,8 @@ export async function listOwnedAgents(userId: string) {
       acct.initial_cash,
       acct.available_cash,
       acct.total_equity,
-      acct.display_equity
+      acct.display_equity,
+      acct.risk_tag
     from agent_claims c
     inner join agents a on a.id = c.agent_id
     left join agent_accounts acct on acct.agent_id = a.id
@@ -58,33 +60,27 @@ export async function listOwnedAgents(userId: string) {
     order by coalesce(a.updated_at, a.created_at) desc, a.id asc
   `;
 
-  return Promise.all(
-    rows.map(async (row) => {
-      const marked = await refreshDisplayEquity(row.id);
-      const initial = marked.initialCash ?? row.initial_cash ?? INITIAL_CAPITAL;
-      const equity = marked.totalEquity ?? row.total_equity ?? initial;
-      const displayEquity = marked.displayEquity ?? row.display_equity ?? equity;
-      return {
-        id: row.id,
-        name: row.name,
-        xUrl: row.x_url,
-        status: row.status,
-        runnerStatus: row.runner_status ?? 'idle',
-        initialCash: initial,
-        availableCash: marked.availableCash ?? row.available_cash ?? initial,
-        totalEquity: equity,
-        displayEquity,
-        returnRate: roundUsd(((equity - initial) / initial) * 100),
-        displayReturnRate: roundUsd(((displayEquity - initial) / initial) * 100),
-        riskTag: marked.riskTag ?? null,
-        closeOnly: marked.closeOnly,
-        lastHeartbeatAt:
-          row.last_heartbeat_at instanceof Date
-            ? row.last_heartbeat_at.toISOString()
-            : row.last_heartbeat_at,
-      };
-    })
-  );
+  return rows.map((row) => {
+    const initial = row.initial_cash ?? INITIAL_CAPITAL;
+    const equity = row.total_equity ?? row.display_equity ?? initial;
+    const displayEquity = row.display_equity ?? equity;
+    return {
+      id: row.id,
+      name: row.name,
+      xUrl: row.x_url,
+      status: row.status,
+      runnerStatus: row.runner_status ?? 'idle',
+      initialCash: initial,
+      availableCash: row.available_cash ?? initial,
+      totalEquity: equity,
+      displayEquity,
+      returnRate: roundUsd(((equity - initial) / initial) * 100),
+      displayReturnRate: roundUsd(((displayEquity - initial) / initial) * 100),
+      riskTag: row.risk_tag ?? null,
+      closeOnly: row.risk_tag === 'close_only',
+      lastHeartbeatAt: toIsoValue(row.last_heartbeat_at),
+    };
+  });
 }
 
 export async function getOwnedAgentSummary(agentId: string) {
