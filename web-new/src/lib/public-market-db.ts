@@ -3,6 +3,7 @@ import { getSqlClient } from '@/db/postgres';
 import { getRiskMode, getRiskTagForAccount } from '@/lib/account-metrics';
 import { ensureAgentAvatarUrlColumn } from '@/lib/agent-avatar-schema';
 import { buildExecutionPath } from '@/lib/execution-path';
+import { normalizeTimestampToIsoString } from '@/lib/timestamp';
 import { ensureTradeExecutionQuoteSourceColumn } from '@/lib/trade-execution-schema';
 import { INITIAL_CAPITAL } from '@/lib/trading-rules';
 
@@ -21,6 +22,12 @@ type PublicLeaderboardDatabaseRow = {
   agent_avatar: string | null;
   risk_tag: RiskTag;
   available_cash: number | null;
+};
+
+type PublicLeaderboardMetaRow = {
+  snapshot_at: string | Date | null;
+  competition_id: string | null;
+  total: string | number;
 };
 
 type PublicTopTier = 'top_3' | 'top_10' | 'normal';
@@ -123,25 +130,23 @@ export async function getPublicLeaderboardFromDatabase(input: {
   pageSize: number;
 }) {
   await ensureAgentAvatarUrlColumn();
-  const rows = await queryLatestPublicLeaderboardRowsFromDatabase();
-  const start = (input.page - 1) * input.pageSize;
-  const pageItems = rows.slice(start, start + input.pageSize);
+  const { rows, meta } = await queryLatestPublicLeaderboardPageFromDatabase(input);
+  const total = Number(meta?.total ?? 0);
 
   return {
-    items: pageItems.map(mapLeaderboardRow),
-    snapshotAt: toIsoString(rows[0]?.snapshot_at ?? null),
-    competitionId: rows[0]?.competition_id ?? null,
-    total: rows.length,
+    items: rows.map(mapLeaderboardRow),
+    snapshotAt: toIsoString(meta?.snapshot_at ?? null),
+    competitionId: meta?.competition_id ?? null,
+    total,
     page: input.page,
     pageSize: input.pageSize,
-    totalPages: Math.ceil(rows.length / input.pageSize),
+    totalPages: Math.ceil(total / input.pageSize),
   };
 }
 
 export async function getPublicLeaderboardEntryFromDatabase(agentId: string) {
   await ensureAgentAvatarUrlColumn();
-  const rows = await queryLatestPublicLeaderboardRowsFromDatabase();
-  const row = rows.find((item) => item.agent_id === agentId) ?? null;
+  const row = await queryLatestPublicLeaderboardEntryFromDatabase(agentId);
   if (!row) {
     return null;
   }
@@ -519,10 +524,76 @@ export async function getPublicHomeOverviewFromDatabase() {
   };
 }
 
-async function queryLatestPublicLeaderboardRowsFromDatabase() {
+async function queryLatestPublicLeaderboardPageFromDatabase(input: {
+  page: number;
+  pageSize: number;
+}) {
+  const sql = getSqlClient();
+  const offset = (input.page - 1) * input.pageSize;
+  const [metaRows, rows] = await Promise.all([
+    sql<PublicLeaderboardMetaRow[]>`
+      with latest as (
+        select max(ls.snapshot_at) as snapshot_at
+        from leaderboard_snapshots ls
+        inner join agents a on a.id = ls.agent_id
+        where a.claim_status = 'claimed'
+      )
+      select
+        latest.snapshot_at,
+        max(ls.competition_id) filter (where a.id is not null) as competition_id,
+        count(a.id) as total
+      from latest
+      left join leaderboard_snapshots ls on ls.snapshot_at = latest.snapshot_at
+      left join agents a on a.id = ls.agent_id and a.claim_status = 'claimed'
+      group by latest.snapshot_at
+    `,
+    sql<PublicLeaderboardDatabaseRow[]>`
+      with latest as (
+        select max(ls.snapshot_at) as snapshot_at
+        from leaderboard_snapshots ls
+        inner join agents a on a.id = ls.agent_id
+        where a.claim_status = 'claimed'
+      ),
+      ranked as (
+        select
+          row_number() over (order by ls.rank asc, ls.agent_id asc) as public_rank,
+          ls.agent_id,
+          ls.competition_id,
+          ls.return_rate,
+          ls.equity_value,
+          ls.change_24h,
+          ls.drawdown,
+          ls.model_name,
+          ls.rank_change_24h,
+          ls.snapshot_at,
+          a.name as agent_name,
+          a.avatar_url as agent_avatar,
+          acct.risk_tag,
+          acct.available_cash
+        from leaderboard_snapshots ls
+        inner join latest latest_snap on latest_snap.snapshot_at = ls.snapshot_at
+        inner join agents a on a.id = ls.agent_id
+        left join agent_accounts acct on acct.agent_id = ls.agent_id
+        where a.claim_status = 'claimed'
+      )
+      select *
+      from ranked
+      order by public_rank asc
+      limit ${input.pageSize}
+      offset ${offset}
+    `,
+  ]);
+
+  return {
+    meta: metaRows[0] ?? null,
+    rows,
+  };
+}
+
+async function queryLatestPublicLeaderboardEntryFromDatabase(agentId: string) {
   await ensureAgentAvatarUrlColumn();
   const sql = getSqlClient();
-  return sql<PublicLeaderboardDatabaseRow[]>`
+  const rows = await sql<PublicLeaderboardDatabaseRow[]>`
     with latest as (
       select max(ls.snapshot_at) as snapshot_at
       from leaderboard_snapshots ls
@@ -564,8 +635,11 @@ async function queryLatestPublicLeaderboardRowsFromDatabase() {
     from ranked
     inner join agents a on a.id = ranked.agent_id
     left join agent_accounts acct on acct.agent_id = ranked.agent_id
+    where ranked.agent_id = ${agentId}
     order by ranked.public_rank asc
+    limit 1
   `;
+  return rows[0] ?? null;
 }
 
 function mapLeaderboardRow(row: PublicLeaderboardDatabaseRow) {
@@ -602,11 +676,7 @@ function mapLeaderboardRow(row: PublicLeaderboardDatabaseRow) {
 }
 
 function toIsoString(value: string | Date | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return normalizeTimestampToIsoString(value);
 }
 
 function topTierFromRankSnapshot(rank: number | null): PublicTopTier {

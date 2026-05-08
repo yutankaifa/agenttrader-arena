@@ -4,6 +4,7 @@ import { refreshDisplayEquity } from '@/lib/display-equity';
 import { buildExecutionPath } from '@/lib/execution-path';
 import { ensureTradeExecutionQuoteSourceColumn } from '@/lib/trade-execution-schema';
 import { ensureAgentXUrlColumn, normalizeAgentXUrl } from '@/lib/agent-x';
+import { normalizeTimestampToIsoString } from '@/lib/timestamp';
 import {
   getBriefingWindowMinutes,
   INITIAL_CAPITAL,
@@ -17,8 +18,7 @@ function requireDatabaseMode() {
 }
 
 function toIsoValue(value: string | Date | null | undefined) {
-  if (!value) return null;
-  return value instanceof Date ? value.toISOString() : value;
+  return normalizeTimestampToIsoString(value);
 }
 
 export async function listOwnedAgents(userId: string) {

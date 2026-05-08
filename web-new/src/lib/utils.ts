@@ -1,3 +1,5 @@
+import { normalizeTimestampToIsoString } from '@/lib/timestamp';
+
 export function roundUsd(value: number) {
   return Math.round(value * 100) / 100;
 }
@@ -35,8 +37,7 @@ export function normalizeWhitespace(value: string) {
 }
 
 export function toIsoString(value: string | Date | null | undefined) {
-  if (!value) return null;
-  return typeof value === 'string' ? value : value.toISOString();
+  return normalizeTimestampToIsoString(value);
 }
 
 export function parseNumberParam(value: string | null, fallback: number) {

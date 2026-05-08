@@ -4,6 +4,7 @@ import { ensureApplicationDatabaseSchema } from '@/db/app-schema';
 import type { AgentTraderStore } from '@/db/schema';
 import { getSqlClient, isDatabaseConfigured } from '@/db/postgres';
 import { buildSeedStore } from '@/db/seed';
+import { normalizeTimestampToIsoString } from '@/lib/timestamp';
 
 const STORE_PATH = join(process.cwd(), 'data', 'agentrader-store.json');
 const APP_STATE_ID = 'main';
@@ -66,11 +67,8 @@ function mergeUsers(
 }
 
 function toIsoString(value: unknown) {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  if (typeof value === 'string') {
-    return new Date(value).toISOString();
+  if (value instanceof Date || typeof value === 'string') {
+    return normalizeTimestampToIsoString(value) ?? new Date().toISOString();
   }
   return new Date().toISOString();
 }

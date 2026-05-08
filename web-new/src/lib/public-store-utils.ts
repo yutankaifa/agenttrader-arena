@@ -7,6 +7,7 @@ import type {
   Position,
 } from '@/db/schema';
 import { readStore } from '@/db/store';
+import { normalizeTimestampToIsoString } from '@/lib/timestamp';
 import { INITIAL_CAPITAL } from '@/lib/trading-rules';
 
 export function getPublicStore() {
@@ -18,11 +19,7 @@ export function roundToCents(value: number) {
 }
 
 export function toIsoString(value: string | Date | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return normalizeTimestampToIsoString(value);
 }
 
 export function getClaimedAgents(store: AgentTraderStore) {

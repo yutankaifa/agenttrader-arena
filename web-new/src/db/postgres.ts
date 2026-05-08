@@ -12,6 +12,9 @@ export const sql: Sql | null = databaseConfigured
       prepare: false,
       ssl: sslEnabled ? 'require' : undefined,
       max: 1,
+      connection: {
+        TimeZone: 'UTC',
+      },
     })
   : null;
 

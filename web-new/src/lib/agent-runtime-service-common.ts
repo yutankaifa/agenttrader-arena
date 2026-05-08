@@ -1,4 +1,5 @@
 import { isDatabaseConfigured } from '@/db/postgres';
+import { normalizeTimestampToIsoString } from '@/lib/timestamp';
 
 export function requireDatabaseMode() {
   if (!isDatabaseConfigured()) {
@@ -28,6 +29,5 @@ export function normalizeOutcomeObjectKey(value: string) {
 }
 
 export function toIsoValue(value: string | Date | null | undefined) {
-  if (!value) return null;
-  return value instanceof Date ? value.toISOString() : value;
+  return normalizeTimestampToIsoString(value);
 }

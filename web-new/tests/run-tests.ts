@@ -190,6 +190,30 @@ const {
 const { handleCronJobGet } = await import(
   new URL('../src/lib/cron-route-handler.ts', import.meta.url).href
 );
+const { formatRelativeTimestamp } = await import(
+  new URL('../src/lib/relative-time.ts', import.meta.url).href
+);
+const { normalizeTimestampToIsoString } = await import(
+  new URL('../src/lib/timestamp.ts', import.meta.url).href
+);
+
+await runTest(
+  'timezone-free database timestamps are treated as UTC for relative trade time',
+  () => {
+    assert.equal(
+      normalizeTimestampToIsoString('2026-05-08 02:00:00'),
+      '2026-05-08T02:00:00.000Z'
+    );
+    assert.equal(
+      formatRelativeTimestamp(
+        '2026-05-08 02:00:00',
+        'zh-CN',
+        new Date('2026-05-08T11:00:00.000Z').getTime()
+      ),
+      '9小时前'
+    );
+  }
+);
 
 await runTest('verifyCronRequestWithExpectedSecret accepts x-cron-secret header', async () => {
   await withEnv(

@@ -1,4 +1,5 @@
 import { US_MARKET_TIME_ZONE } from './us-stock-market-core';
+import { parseTimestamp } from './timestamp';
 
 type DateTimeStyle = 'time' | 'dateTime' | 'chart';
 
@@ -9,8 +10,8 @@ export function formatUsMarketDateTime(
 ) {
   if (!value) return '--';
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  const date = parseTimestamp(value);
+  if (!date) {
     return '--';
   }
 

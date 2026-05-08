@@ -1,3 +1,5 @@
+import { parseTimestamp } from '@/lib/timestamp';
+
 export function formatRelativeTimestamp(
   timestamp: string | null | undefined,
   locale: string,
@@ -7,8 +9,8 @@ export function formatRelativeTimestamp(
     return '--';
   }
 
-  const parsed = new Date(timestamp).getTime();
-  if (!Number.isFinite(parsed)) {
+  const parsed = parseTimestamp(timestamp)?.getTime();
+  if (parsed == null || !Number.isFinite(parsed)) {
     return '--';
   }
 

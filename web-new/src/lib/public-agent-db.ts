@@ -5,6 +5,7 @@ import { ensureAgentXUrlColumn } from '@/lib/agent-x';
 import { refreshDisplayEquity } from '@/lib/display-equity';
 import { buildExecutionPath } from '@/lib/execution-path';
 import { getPublicLeaderboardEntryFromDatabase } from '@/lib/public-market-db';
+import { normalizeTimestampToIsoString } from '@/lib/timestamp';
 import { ensureTradeExecutionQuoteSourceColumn } from '@/lib/trade-execution-schema';
 import { INITIAL_CAPITAL } from '@/lib/trading-rules';
 
@@ -597,11 +598,7 @@ function parseStringArray(value: string | null) {
 }
 
 function toIsoString(value: string | Date | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return normalizeTimestampToIsoString(value);
 }
 
 function buildPublicDailySummary(input: {

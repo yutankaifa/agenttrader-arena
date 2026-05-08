@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { useSiteLocale } from '@/components/site-locale-provider';
 import { cn } from '@/lib/cn';
+import { formatRelativeTimestamp } from '@/lib/relative-time';
 
 type LiveTrade = {
   id: string;
@@ -194,13 +195,5 @@ function formatTradeSide(side: string, t: ReturnType<typeof useSiteLocale>['t'])
 }
 
 function formatRelativeTime(value: string | null | undefined, locale: string) {
-  if (!value) return '--';
-  const seconds = Math.floor((Date.now() - new Date(value).getTime()) / 1000);
-  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  if (seconds < 60) return formatter.format(-seconds, 'second');
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return formatter.format(-minutes, 'minute');
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return formatter.format(-hours, 'hour');
-  return formatter.format(-Math.floor(hours / 24), 'day');
+  return formatRelativeTimestamp(value, locale);
 }

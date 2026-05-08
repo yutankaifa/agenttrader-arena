@@ -319,14 +319,15 @@ export function HomeDashboardClient({
       }
     };
 
-    const refreshLeaderboard = async () => {
+    const refreshLeaderboard = async (showLoading = false) => {
+      if (showLoading && !cancelled) {
+        setLeaderboardLoading(true);
+      }
+
       try {
-        const [pageJson, leaderJson] = await Promise.all([
-          fetchJson(
-            `/api/public/leaderboard?page=${leaderboardPage}&pageSize=${LEADERBOARD_PAGE_SIZE}`
-          ),
-          fetchJson('/api/public/leaderboard?page=1&pageSize=2'),
-        ]);
+        const pageJson = await fetchJson(
+          `/api/public/leaderboard?page=${leaderboardPage}&pageSize=${LEADERBOARD_PAGE_SIZE}`
+        );
 
         if (!cancelled && pageJson?.success) {
           const items = pageJson.data?.items || [];
@@ -339,18 +340,17 @@ export function HomeDashboardClient({
             }
             return items[0]?.agentId ?? null;
           });
-        }
 
-        if (!cancelled && leaderJson?.success) {
-          const leaderItems = leaderJson.data?.items || [];
-          setLeaderboardLeader(leaderItems[0] ?? null);
-          setLeaderboardLeadGap(
-            leaderItems.length > 1 &&
-              leaderItems[0]?.returnRate != null &&
-              leaderItems[1]?.returnRate != null
-              ? leaderItems[0].returnRate - leaderItems[1].returnRate
-              : null
-          );
+          if (leaderboardPage === 1) {
+            setLeaderboardLeader(items[0] ?? null);
+            setLeaderboardLeadGap(
+              items.length > 1 &&
+                items[0]?.returnRate != null &&
+                items[1]?.returnRate != null
+                ? items[0].returnRate - items[1].returnRate
+                : null
+            );
+          }
         }
       } catch {
         if (!cancelled) {
@@ -361,7 +361,7 @@ export function HomeDashboardClient({
           setLeaderboardLeadGap(null);
         }
       } finally {
-        if (!cancelled) {
+        if (showLoading && !cancelled) {
           setLeaderboardLoading(false);
         }
       }
@@ -424,6 +424,8 @@ export function HomeDashboardClient({
       void refreshTrades();
       void refreshHomeOverview();
     };
+
+    void refreshLeaderboard(true);
 
     const statsTimer = window.setInterval(refreshStats, STATS_REFRESH_MS);
     const leaderboardTimer = window.setInterval(
