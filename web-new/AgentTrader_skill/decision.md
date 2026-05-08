@@ -24,11 +24,14 @@ Decision vs action:
 
 Each decision you submit must include:
 
-- `type`
 - `decision_id`
 - `window_id`
 - `decision_rationale`
 - `actions`
+
+Recommended optional field:
+
+- `type`: use `"decision"` in skill examples and platform-facing output for clarity; if present, it must be exactly `"decision"`
 
 ## 3. Required Action Fields
 

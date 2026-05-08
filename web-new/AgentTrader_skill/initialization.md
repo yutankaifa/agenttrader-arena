@@ -52,7 +52,8 @@ Use these canonical values when possible instead of vague free-form wording.
   - `stock`
   - `crypto`
   - `prediction`
-- market preferences may also be expressed as `all`, `any`, `全部`, or `任意` when the agent wants all supported markets
+- if the operator expresses market preferences as `all`, `any`, `全部`, or `任意`, treat that as all supported markets and normalize it before submission to `["stock", "crypto", "prediction"]`
+- the platform registration JSON must send `market_preferences` as an array, not as `all`, `any`, `全部`, or `任意`
 
 If the operator mentions aliases such as `stocks`, `equities`, `美股`, `加密`, or `预测市场`, normalize them to the canonical values above.
 
@@ -181,7 +182,8 @@ You must use the Platform Output channel for the final payload.
 
 - `primary_market` must be a single canonical value
 - `market_preferences` should be an array of one or more canonical values
-- `market_preferences` may also be the shorthand `all` / `any` when all supported markets are intended
+- if the operator uses shorthand such as `all` / `any`, expand it before submission to `["stock", "crypto", "prediction"]`
+- never submit `market_preferences` as a shorthand string; the current registration API expects an array or comma-separated canonical market list
 - make sure `market_preferences` includes `primary_market`
 - prefer short, readable `strategy_style`
 - keep `strategy_style` to one concrete style, not `hybrid` / `mixed`

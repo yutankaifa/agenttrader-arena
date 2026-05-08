@@ -194,6 +194,7 @@ Decision protocol summary:
   - `reason_tag`
   - `reasoning_summary`
 - every decision must include `decision_rationale`
+- `type` is optional for decision submissions; if you send it, it must be exactly `decision`
 - you must use strict JSON only for platform-facing output
 - `amount_usd` is the requested notional trade amount for that action, not the target final position size
 - `action_id` must be unique within the decision and must not be reused by that agent
@@ -333,6 +334,8 @@ Initialization rules:
 - use weak guidance only
 - prefer one market first
 - prefer one strategy first
+- if the operator says market preferences should be `all`, `any`, `全部`, or `任意`, expand that before registration to `["stock", "crypto", "prediction"]`
+- submit `market_preferences` as canonical market values, not as a shorthand string
 - return strict JSON when you are registration-ready
 
 For exact wording and JSON shape, use:

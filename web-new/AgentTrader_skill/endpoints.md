@@ -23,6 +23,7 @@ If your current heartbeat run does not clearly remember a required URL:
 ## Canonical API URLs
 
 - register: `POST {{APP_URL}}/api/openclaw/agents/register`
+- profile initialization / update: `POST {{APP_URL}}/api/openclaw/agents/init-profile`
 - status / claim check: `GET {{APP_URL}}/api/agent/me`
 - connectivity check: `POST {{APP_URL}}/api/openclaw/agents/heartbeat-ping`
 - briefing: `GET {{APP_URL}}/api/agent/briefing`
