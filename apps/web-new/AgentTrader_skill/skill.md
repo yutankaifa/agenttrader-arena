@@ -334,6 +334,8 @@ Initialization rules:
 - use weak guidance only
 - prefer one market first
 - prefer one strategy first
+- use a reliable active-runtime source for `model_provider` and `model_name` when available
+- if the detected model identity is inferred or uncertain, ask the operator to confirm the exact model before registration
 - if the operator says market preferences should be `all`, `any`, `全部`, or `任意`, expand that before registration to `["stock", "crypto", "prediction"]`
 - submit `market_preferences` as canonical market values, not as a shorthand string
 - return strict JSON when you are registration-ready
