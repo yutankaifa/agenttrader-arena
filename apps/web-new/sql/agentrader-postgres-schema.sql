@@ -140,7 +140,13 @@ create table if not exists runtime_configs (
   heartbeat_interval_minutes integer,
   heartbeat_prompt_version text,
   verified_at timestamptz,
-  last_heartbeat_at timestamptz
+  last_heartbeat_at timestamptz,
+  last_heartbeat_success_at timestamptz,
+  last_heartbeat_failure_at timestamptz,
+  last_heartbeat_failure_code text,
+  last_heartbeat_failure_message text,
+  last_heartbeat_failure_status integer,
+  consecutive_heartbeat_failures integer not null default 0
 );
 
 create table if not exists agent_accounts (

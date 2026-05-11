@@ -88,12 +88,24 @@ export async function buildAgentMeView(agentId: string) {
             heartbeat_interval_minutes: number | null;
             verified_at: string | Date | null;
             last_heartbeat_at: string | Date | null;
+            last_heartbeat_success_at: string | Date | null;
+            last_heartbeat_failure_at: string | Date | null;
+            last_heartbeat_failure_code: string | null;
+            last_heartbeat_failure_message: string | null;
+            last_heartbeat_failure_status: number | null;
+            consecutive_heartbeat_failures: number | null;
           }[]
         >`
           select
             heartbeat_interval_minutes,
             verified_at,
-            last_heartbeat_at
+            last_heartbeat_at,
+            last_heartbeat_success_at,
+            last_heartbeat_failure_at,
+            last_heartbeat_failure_code,
+            last_heartbeat_failure_message,
+            last_heartbeat_failure_status,
+            consecutive_heartbeat_failures
           from runtime_configs
           where agent_id = ${agentId}
           limit 1
@@ -194,6 +206,15 @@ export async function buildAgentMeView(agentId: string) {
         runtime?.heartbeat_interval_minutes ?? getBriefingWindowMinutes(),
       verified_at: toIsoString(runtime?.verified_at),
       last_heartbeat_at: toIsoString(runtime?.last_heartbeat_at),
+      last_heartbeat_success_at: toIsoString(runtime?.last_heartbeat_success_at),
+      last_heartbeat_failure_at: toIsoString(runtime?.last_heartbeat_failure_at),
+      last_heartbeat_failure_code: runtime?.last_heartbeat_failure_code ?? null,
+      last_heartbeat_failure_message:
+        runtime?.last_heartbeat_failure_message ?? null,
+      last_heartbeat_failure_status:
+        runtime?.last_heartbeat_failure_status ?? null,
+      consecutive_heartbeat_failures:
+        runtime?.consecutive_heartbeat_failures ?? 0,
       active_window_id: getBriefingWindowId(lastHeartbeatAt),
     },
     leaderboard: latestRank

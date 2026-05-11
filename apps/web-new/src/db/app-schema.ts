@@ -188,7 +188,13 @@ export async function ensureApplicationDatabaseSchema() {
             heartbeat_interval_minutes integer,
             heartbeat_prompt_version text,
             verified_at timestamptz,
-            last_heartbeat_at timestamptz
+            last_heartbeat_at timestamptz,
+            last_heartbeat_success_at timestamptz,
+            last_heartbeat_failure_at timestamptz,
+            last_heartbeat_failure_code text,
+            last_heartbeat_failure_message text,
+            last_heartbeat_failure_status integer,
+            consecutive_heartbeat_failures integer not null default 0
           )
         `;
         await sql`
@@ -198,9 +204,39 @@ export async function ensureApplicationDatabaseSchema() {
           alter table runtime_configs add column if not exists heartbeat_prompt_version text
         `;
         await sql`
+          alter table runtime_configs add column if not exists last_heartbeat_success_at timestamptz
+        `;
+        await sql`
+          alter table runtime_configs add column if not exists last_heartbeat_failure_at timestamptz
+        `;
+        await sql`
+          alter table runtime_configs add column if not exists last_heartbeat_failure_code text
+        `;
+        await sql`
+          alter table runtime_configs add column if not exists last_heartbeat_failure_message text
+        `;
+        await sql`
+          alter table runtime_configs add column if not exists last_heartbeat_failure_status integer
+        `;
+        await sql`
+          alter table runtime_configs add column if not exists consecutive_heartbeat_failures integer not null default 0
+        `;
+        await sql`
           update runtime_configs
           set id = coalesce(id, 'runtime_' || agent_id)
           where coalesce(id, '') = ''
+        `;
+        await sql`
+          update runtime_configs
+          set
+            last_heartbeat_success_at = coalesce(
+              last_heartbeat_success_at,
+              last_heartbeat_at
+            ),
+            consecutive_heartbeat_failures = coalesce(
+              consecutive_heartbeat_failures,
+              0
+            )
         `;
         await sql`
           create table if not exists competitions (

@@ -33,6 +33,12 @@ export async function listOwnedAgents(userId: string) {
       status: string;
       runner_status: string | null;
       last_heartbeat_at: string | Date | null;
+      last_heartbeat_success_at: string | Date | null;
+      last_heartbeat_failure_at: string | Date | null;
+      last_heartbeat_failure_code: string | null;
+      last_heartbeat_failure_message: string | null;
+      last_heartbeat_failure_status: number | null;
+      consecutive_heartbeat_failures: number | null;
       initial_cash: number | null;
       available_cash: number | null;
       total_equity: number | null;
@@ -47,6 +53,12 @@ export async function listOwnedAgents(userId: string) {
       a.status,
       a.runner_status,
       a.last_heartbeat_at,
+      rc.last_heartbeat_success_at,
+      rc.last_heartbeat_failure_at,
+      rc.last_heartbeat_failure_code,
+      rc.last_heartbeat_failure_message,
+      rc.last_heartbeat_failure_status,
+      rc.consecutive_heartbeat_failures,
       acct.initial_cash,
       acct.available_cash,
       acct.total_equity,
@@ -55,6 +67,7 @@ export async function listOwnedAgents(userId: string) {
     from agent_claims c
     inner join agents a on a.id = c.agent_id
     left join agent_accounts acct on acct.agent_id = a.id
+    left join runtime_configs rc on rc.agent_id = a.id
     where c.claimed_by = ${userId}
       and c.status = 'claimed'
     order by coalesce(a.updated_at, a.created_at) desc, a.id asc
@@ -79,6 +92,12 @@ export async function listOwnedAgents(userId: string) {
       riskTag: row.risk_tag ?? null,
       closeOnly: row.risk_tag === 'close_only',
       lastHeartbeatAt: toIsoValue(row.last_heartbeat_at),
+      lastHeartbeatSuccessAt: toIsoValue(row.last_heartbeat_success_at),
+      lastHeartbeatFailureAt: toIsoValue(row.last_heartbeat_failure_at),
+      lastHeartbeatFailureCode: row.last_heartbeat_failure_code,
+      lastHeartbeatFailureMessage: row.last_heartbeat_failure_message,
+      lastHeartbeatFailureStatus: row.last_heartbeat_failure_status,
+      consecutiveHeartbeatFailures: row.consecutive_heartbeat_failures ?? 0,
     };
   });
 }
@@ -144,11 +163,23 @@ export async function getOwnedAgentSummary(agentId: string) {
       {
         heartbeat_interval_minutes: number | null;
         last_heartbeat_at: string | Date | null;
+        last_heartbeat_success_at: string | Date | null;
+        last_heartbeat_failure_at: string | Date | null;
+        last_heartbeat_failure_code: string | null;
+        last_heartbeat_failure_message: string | null;
+        last_heartbeat_failure_status: number | null;
+        consecutive_heartbeat_failures: number | null;
       }[]
     >`
       select
         heartbeat_interval_minutes,
-        last_heartbeat_at
+        last_heartbeat_at,
+        last_heartbeat_success_at,
+        last_heartbeat_failure_at,
+        last_heartbeat_failure_code,
+        last_heartbeat_failure_message,
+        last_heartbeat_failure_status,
+        consecutive_heartbeat_failures
       from runtime_configs
       where agent_id = ${agentId}
       limit 1
@@ -192,6 +223,17 @@ export async function getOwnedAgentSummary(agentId: string) {
       heartbeatIntervalMinutes:
         runtime?.heartbeat_interval_minutes ?? getBriefingWindowMinutes(),
       lastHeartbeatAt: toIsoValue(runtime?.last_heartbeat_at ?? null),
+      lastHeartbeatSuccessAt:
+        toIsoValue(runtime?.last_heartbeat_success_at ?? null),
+      lastHeartbeatFailureAt:
+        toIsoValue(runtime?.last_heartbeat_failure_at ?? null),
+      lastHeartbeatFailureCode: runtime?.last_heartbeat_failure_code ?? null,
+      lastHeartbeatFailureMessage:
+        runtime?.last_heartbeat_failure_message ?? null,
+      lastHeartbeatFailureStatus:
+        runtime?.last_heartbeat_failure_status ?? null,
+      consecutiveHeartbeatFailures:
+        runtime?.consecutive_heartbeat_failures ?? 0,
     },
   };
 }

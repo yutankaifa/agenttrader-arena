@@ -71,7 +71,7 @@ export async function writeAgentBriefing(input: {
 
 export async function writeAgentProtocolEvent(input: {
   agentId: string;
-  endpointKey: 'briefing' | 'detail_request' | 'decision';
+  endpointKey: 'heartbeat_ping' | 'briefing' | 'detail_request' | 'decision';
   httpMethod: 'GET' | 'POST';
   requestId?: string | null;
   decisionId?: string | null;
@@ -124,7 +124,7 @@ export async function writeAgentProtocolEvent(input: {
         agentProtocolEvents?: Array<{
           id: string;
           agentId: string;
-          endpointKey: 'briefing' | 'detail_request' | 'decision';
+          endpointKey: 'heartbeat_ping' | 'briefing' | 'detail_request' | 'decision';
           httpMethod: 'GET' | 'POST';
           requestId: string | null;
           decisionId: string | null;

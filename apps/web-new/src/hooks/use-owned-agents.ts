@@ -18,6 +18,12 @@ export type OwnedAgent = {
   riskTag?: string | null;
   closeOnly?: boolean;
   lastHeartbeatAt: string | null;
+  lastHeartbeatSuccessAt: string | null;
+  lastHeartbeatFailureAt: string | null;
+  lastHeartbeatFailureCode: string | null;
+  lastHeartbeatFailureMessage: string | null;
+  lastHeartbeatFailureStatus: number | null;
+  consecutiveHeartbeatFailures: number;
 };
 
 type AgentsResponse =

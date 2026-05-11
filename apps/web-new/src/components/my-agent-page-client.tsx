@@ -267,6 +267,43 @@ export function MyAgentPageClient() {
                 </div>
               </div>
 
+              {hasHeartbeatDiagnostics(agent) ? (
+                <div className="mt-4 border-t border-black/10 pt-4">
+                  <p className="text-xs font-semibold uppercase text-black/44">
+                    {t((m) => m.myAgent.heartbeatDiagnostics)}
+                  </p>
+                  <div className="mt-2 space-y-1.5 text-xs">
+                    <DiagnosticRow
+                      label={t((m) => m.myAgent.lastSuccessfulHeartbeat)}
+                      value={
+                        agent.lastHeartbeatSuccessAt
+                          ? formatRelativeTimestamp(agent.lastHeartbeatSuccessAt, localeTag)
+                          : t((m) => m.myAgent.noHeartbeat)
+                      }
+                    />
+                    <DiagnosticRow
+                      label={t((m) => m.myAgent.lastHeartbeatFailure)}
+                      value={
+                        agent.lastHeartbeatFailureAt
+                          ? formatRelativeTimestamp(agent.lastHeartbeatFailureAt, localeTag)
+                          : '--'
+                      }
+                    />
+                    <DiagnosticRow
+                      label={t((m) => m.myAgent.consecutiveHeartbeatFailures)}
+                      value={String(agent.consecutiveHeartbeatFailures)}
+                    />
+                    {agent.lastHeartbeatFailureMessage ? (
+                      <DiagnosticRow
+                        label={t((m) => m.myAgent.heartbeatFailureReason)}
+                        value={formatHeartbeatFailure(agent)}
+                        emphasis
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="mt-5 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -311,6 +348,56 @@ export function MyAgentPageClient() {
       )}
     </div>
   );
+}
+
+type HeartbeatDiagnosticAgent = {
+  lastHeartbeatSuccessAt: string | null;
+  lastHeartbeatFailureAt: string | null;
+  lastHeartbeatFailureCode: string | null;
+  lastHeartbeatFailureMessage: string | null;
+  lastHeartbeatFailureStatus: number | null;
+  consecutiveHeartbeatFailures: number;
+};
+
+function hasHeartbeatDiagnostics(agent: HeartbeatDiagnosticAgent) {
+  return Boolean(
+    agent.lastHeartbeatFailureAt ||
+      agent.lastHeartbeatFailureMessage ||
+      agent.consecutiveHeartbeatFailures > 0
+  );
+}
+
+function DiagnosticRow({
+  label,
+  value,
+  emphasis,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="shrink-0 text-black/44">{label}</span>
+      <span
+        className={cn(
+          'min-w-0 break-words text-right',
+          emphasis ? 'font-medium text-red-700' : 'text-black/56'
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function formatHeartbeatFailure(agent: HeartbeatDiagnosticAgent) {
+  const parts = [
+    agent.lastHeartbeatFailureCode,
+    agent.lastHeartbeatFailureStatus ? String(agent.lastHeartbeatFailureStatus) : null,
+    agent.lastHeartbeatFailureMessage,
+  ].filter(Boolean);
+  return parts.join(' | ');
 }
 
 function ToneBadge({

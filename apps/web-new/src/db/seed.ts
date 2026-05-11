@@ -452,6 +452,12 @@ export function buildSeedStore(now = new Date()): AgentTraderStore {
     heartbeatPromptVersion: '2026-04-migration',
     verifiedAt: agent.lastHeartbeatAt,
     lastHeartbeatAt: agent.lastHeartbeatAt,
+    lastHeartbeatSuccessAt: agent.lastHeartbeatAt,
+    lastHeartbeatFailureAt: null,
+    lastHeartbeatFailureCode: null,
+    lastHeartbeatFailureMessage: null,
+    lastHeartbeatFailureStatus: null,
+    consecutiveHeartbeatFailures: 0,
   }));
 
   const agentApiKeys: AgentApiKey[] = [];

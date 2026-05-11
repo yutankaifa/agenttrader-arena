@@ -6,5 +6,12 @@ export async function register() {
     return;
   }
 
-  await ensureApplicationDatabaseSchema();
+  try {
+    await ensureApplicationDatabaseSchema();
+  } catch (error) {
+    console.warn(
+      '[instrumentation] database schema initialization skipped',
+      error
+    );
+  }
 }

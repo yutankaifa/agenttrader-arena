@@ -40,6 +40,13 @@ export async function getAgentRuntimeState(agentId: string) {
       last_heartbeat_at: string | Date | null;
       runner_status: string | null;
       verified_at: string | Date | null;
+      runtime_last_heartbeat_at: string | Date | null;
+      last_heartbeat_success_at: string | Date | null;
+      last_heartbeat_failure_at: string | Date | null;
+      last_heartbeat_failure_code: string | null;
+      last_heartbeat_failure_message: string | null;
+      last_heartbeat_failure_status: number | null;
+      consecutive_heartbeat_failures: number | null;
     }[]
   >`
     select
@@ -48,7 +55,14 @@ export async function getAgentRuntimeState(agentId: string) {
       a.claim_status,
       a.last_heartbeat_at,
       a.runner_status,
-      rc.verified_at
+      rc.verified_at,
+      rc.last_heartbeat_at as runtime_last_heartbeat_at,
+      rc.last_heartbeat_success_at,
+      rc.last_heartbeat_failure_at,
+      rc.last_heartbeat_failure_code,
+      rc.last_heartbeat_failure_message,
+      rc.last_heartbeat_failure_status,
+      rc.consecutive_heartbeat_failures
     from agents a
     left join runtime_configs rc on rc.agent_id = a.id
     where a.id = ${agentId}
@@ -71,7 +85,19 @@ export async function getAgentRuntimeState(agentId: string) {
     operatorPaused: row.status === 'paused',
     runtimeVerifiedAt:
       row.verified_at instanceof Date ? row.verified_at.toISOString() : row.verified_at,
+    runtimeLastHeartbeatAt: toIsoValue(row.runtime_last_heartbeat_at),
+    lastHeartbeatSuccessAt: toIsoValue(row.last_heartbeat_success_at),
+    lastHeartbeatFailureAt: toIsoValue(row.last_heartbeat_failure_at),
+    lastHeartbeatFailureCode: row.last_heartbeat_failure_code,
+    lastHeartbeatFailureMessage: row.last_heartbeat_failure_message,
+    lastHeartbeatFailureStatus: row.last_heartbeat_failure_status,
+    consecutiveHeartbeatFailures: row.consecutive_heartbeat_failures ?? 0,
   };
+}
+
+function toIsoValue(value: string | Date | null | undefined) {
+  if (!value) return null;
+  return value instanceof Date ? value.toISOString() : value;
 }
 
 export async function touchAgentHeartbeat(
@@ -118,7 +144,9 @@ export async function touchRuntimeHeartbeat(
       update runtime_configs
       set
         last_heartbeat_at = ${now.toISOString()},
-        verified_at = ${now.toISOString()}
+        last_heartbeat_success_at = ${now.toISOString()},
+        verified_at = ${now.toISOString()},
+        consecutive_heartbeat_failures = 0
       where agent_id = ${agentId}
     `;
     return { agentId };
@@ -126,7 +154,35 @@ export async function touchRuntimeHeartbeat(
 
   await sql`
     update runtime_configs
-    set last_heartbeat_at = ${now.toISOString()}
+    set
+      last_heartbeat_at = ${now.toISOString()},
+      last_heartbeat_success_at = ${now.toISOString()},
+      consecutive_heartbeat_failures = 0
+    where agent_id = ${agentId}
+  `;
+  return { agentId };
+}
+
+export async function recordRuntimeHeartbeatFailure(
+  agentId: string,
+  now = new Date(),
+  failure: {
+    code: string;
+    message: string;
+    statusCode: number;
+  }
+) {
+  requireDatabaseMode();
+  const sql = getSqlClient();
+  const message = failure.message.slice(0, 500);
+  await sql`
+    update runtime_configs
+    set
+      last_heartbeat_failure_at = ${now.toISOString()},
+      last_heartbeat_failure_code = ${failure.code},
+      last_heartbeat_failure_message = ${message},
+      last_heartbeat_failure_status = ${failure.statusCode},
+      consecutive_heartbeat_failures = coalesce(consecutive_heartbeat_failures, 0) + 1
     where agent_id = ${agentId}
   `;
   return { agentId };

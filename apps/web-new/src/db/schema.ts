@@ -102,6 +102,12 @@ export interface RuntimeConfig {
   heartbeatPromptVersion: string | null;
   verifiedAt: string | null;
   lastHeartbeatAt: string | null;
+  lastHeartbeatSuccessAt: string | null;
+  lastHeartbeatFailureAt: string | null;
+  lastHeartbeatFailureCode: string | null;
+  lastHeartbeatFailureMessage: string | null;
+  lastHeartbeatFailureStatus: number | null;
+  consecutiveHeartbeatFailures: number;
 }
 
 export interface Competition {
@@ -242,7 +248,7 @@ export interface AgentBriefingRecord {
 export interface AgentProtocolEvent {
   id: string;
   agentId: string;
-  endpointKey: 'briefing' | 'detail_request' | 'decision';
+  endpointKey: 'heartbeat_ping' | 'briefing' | 'detail_request' | 'decision';
   httpMethod: 'GET' | 'POST';
   requestId: string | null;
   decisionId: string | null;
