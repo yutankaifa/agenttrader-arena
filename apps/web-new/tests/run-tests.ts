@@ -196,6 +196,9 @@ const { formatRelativeTimestamp } = await import(
 const { normalizeTimestampToIsoString } = await import(
   new URL('../src/lib/timestamp.ts', import.meta.url).href
 );
+const { buildSignInDiagnosis } = await import(
+  new URL('../src/lib/auth-sign-in-diagnostics.ts', import.meta.url).href
+);
 
 await runTest(
   'timezone-free database timestamps are treated as UTC for relative trade time',
@@ -214,6 +217,50 @@ await runTest(
     );
   }
 );
+
+await runTest('buildSignInDiagnosis reports unknown email as not registered', () => {
+  assert.deepEqual(buildSignInDiagnosis([]), {
+    status: 'email_not_found',
+    providers: [],
+  });
+});
+
+await runTest('buildSignInDiagnosis reports credential accounts as password mismatch', () => {
+  assert.deepEqual(
+    buildSignInDiagnosis([
+      {
+        user_id: 'auth_user_1',
+        provider_id: 'credential',
+        has_password: true,
+      },
+    ]),
+    {
+      status: 'password_mismatch',
+      providers: [],
+    }
+  );
+});
+
+await runTest('buildSignInDiagnosis reports social-only accounts with providers', () => {
+  assert.deepEqual(
+    buildSignInDiagnosis([
+      {
+        user_id: 'auth_user_1',
+        provider_id: 'google',
+        has_password: false,
+      },
+      {
+        user_id: 'auth_user_1',
+        provider_id: 'github',
+        has_password: false,
+      },
+    ]),
+    {
+      status: 'social_sign_in_required',
+      providers: ['google', 'github'],
+    }
+  );
+});
 
 await runTest('verifyCronRequestWithExpectedSecret accepts x-cron-secret header', async () => {
   await withEnv(

@@ -7,6 +7,22 @@ import { useSiteLocale } from '@/components/site-locale-provider';
 import { signIn, signUp } from '@/core/auth/client';
 
 type AuthMode = 'sign-in' | 'sign-up';
+type SignInDiagnosisStatus =
+  | 'unknown'
+  | 'email_not_found'
+  | 'password_mismatch'
+  | 'social_sign_in_required'
+  | 'sign_in_method_mismatch';
+
+type AuthNotice = {
+  title: string;
+  detail?: string;
+};
+
+type SignInDiagnosisResponse = {
+  status?: SignInDiagnosisStatus;
+  providers?: string[];
+};
 
 export function AuthPageClient({
   callbackURL,
@@ -31,7 +47,9 @@ export function AuthPageClient({
   const [pendingAction, setPendingAction] = useState<
     'sign-in' | 'sign-up' | 'google' | 'github' | null
   >(null);
-  const [message, setMessage] = useState(error ?? '');
+  const [notice, setNotice] = useState<AuthNotice | null>(
+    error ? { title: error, detail: t((m) => m.auth.signInFallbackGuidance) } : null
+  );
   const legalConsentRef = useRef<HTMLInputElement | null>(null);
 
   const showSocial = googleEnabled || githubEnabled;
@@ -47,22 +65,99 @@ export function AuthPageClient({
       return true;
     }
 
-    setMessage(t((m) => m.auth.legalAcceptanceRequired));
+    setNotice({ title: t((m) => m.auth.legalAcceptanceRequired) });
     legalConsentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     legalConsentRef.current?.focus();
     return false;
   }
 
+  function formatProviders(providers: string[]) {
+    const providerNames = providers
+      .map((provider) => {
+        if (provider === 'google') return 'Google';
+        if (provider === 'github') return 'GitHub';
+        return provider;
+      })
+      .filter(Boolean);
+
+    if (providerNames.length === 0) {
+      return t((m) => m.auth.originalSignInMethod);
+    }
+
+    return providerNames.join(' / ');
+  }
+
+  async function buildSignInFailureNotice(fallbackMessage: string): Promise<AuthNotice> {
+    try {
+      const response = await fetch('/api/account/sign-in-diagnostics', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        return {
+          title: fallbackMessage || t((m) => m.auth.signInFailed),
+          detail: t((m) => m.auth.signInFallbackGuidance),
+        };
+      }
+
+      const diagnosis = (await response.json()) as SignInDiagnosisResponse;
+      const providers = formatProviders(diagnosis.providers ?? []);
+
+      if (diagnosis.status === 'email_not_found') {
+        return {
+          title: t((m) => m.auth.signInEmailNotFoundTitle),
+          detail: t((m) => m.auth.signInEmailNotFoundDetail),
+        };
+      }
+
+      if (diagnosis.status === 'social_sign_in_required') {
+        return {
+          title: t((m) => m.auth.signInSocialRequiredTitle).replace('{providers}', providers),
+          detail: t((m) => m.auth.signInSocialRequiredDetail).replace('{providers}', providers),
+        };
+      }
+
+      if (diagnosis.status === 'password_mismatch') {
+        return {
+          title: t((m) => m.auth.signInPasswordMismatchTitle),
+          detail: t((m) => m.auth.signInPasswordMismatchDetail),
+        };
+      }
+
+      if (diagnosis.status === 'sign_in_method_mismatch') {
+        return {
+          title: t((m) => m.auth.signInMethodMismatchTitle),
+          detail: t((m) => m.auth.signInMethodMismatchDetail),
+        };
+      }
+    } catch {
+      return {
+        title: fallbackMessage || t((m) => m.auth.signInFailed),
+        detail: t((m) => m.auth.signInFallbackGuidance),
+      };
+    }
+
+    return {
+      title: fallbackMessage || t((m) => m.auth.signInFailed),
+      detail: t((m) => m.auth.signInFallbackGuidance),
+    };
+  }
+
   async function handleEmailAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage('');
+    setNotice(null);
 
     if (!email || !password || (mode === 'sign-up' && !name.trim())) {
-      setMessage(
-        mode === 'sign-up'
-          ? t((m) => m.auth.nameRequired)
-          : t((m) => m.auth.emailRequired)
-      );
+      setNotice({
+        title:
+          mode === 'sign-up'
+            ? t((m) => m.auth.nameRequired)
+            : t((m) => m.auth.emailRequired),
+      });
       return;
     }
 
@@ -85,7 +180,10 @@ export function AuthPageClient({
               window.location.href = safeCallbackURL;
             },
             onError: (context) => {
-              setMessage(context.error.message || t((m) => m.auth.signUpFailed));
+              setNotice({
+                title: context.error.message || t((m) => m.auth.signUpFailed),
+                detail: t((m) => m.auth.signUpFallbackGuidance),
+              });
             },
           }
         );
@@ -102,13 +200,23 @@ export function AuthPageClient({
           onSuccess: () => {
             window.location.href = safeCallbackURL;
           },
-          onError: (context) => {
-            setMessage(context.error.message || t((m) => m.auth.signInFailed));
+          onError: async (context) => {
+            setNotice(
+              await buildSignInFailureNotice(
+                context.error.message || t((m) => m.auth.signInFailed)
+              )
+            );
           },
         }
       );
     } catch (caughtError) {
-      setMessage(caughtError instanceof Error ? caughtError.message : t((m) => m.auth.authFailed));
+      setNotice({
+        title: caughtError instanceof Error ? caughtError.message : t((m) => m.auth.authFailed),
+        detail:
+          mode === 'sign-in'
+            ? t((m) => m.auth.signInFallbackGuidance)
+            : t((m) => m.auth.signUpFallbackGuidance),
+      });
     } finally {
       setPendingAction(null);
       router.refresh();
@@ -116,7 +224,7 @@ export function AuthPageClient({
   }
 
   async function handleSocialSignIn(provider: 'google' | 'github') {
-    setMessage('');
+    setNotice(null);
 
     if (!requireLegalAcceptance()) {
       return;
@@ -132,13 +240,19 @@ export function AuthPageClient({
         },
         {
           onError: (context) => {
-            setMessage(context.error.message || t((m) => m.auth.signInFailed));
+            setNotice({
+              title: context.error.message || t((m) => m.auth.signInFailed),
+              detail: t((m) => m.auth.signInFallbackGuidance),
+            });
             setPendingAction(null);
           },
         }
       );
     } catch (caughtError) {
-      setMessage(caughtError instanceof Error ? caughtError.message : t((m) => m.auth.signInFailed));
+      setNotice({
+        title: caughtError instanceof Error ? caughtError.message : t((m) => m.auth.signInFailed),
+        detail: t((m) => m.auth.signInFallbackGuidance),
+      });
       setPendingAction(null);
     }
   }
@@ -231,9 +345,10 @@ export function AuthPageClient({
             />
           </div>
 
-          {message ? (
-            <div className="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {message}
+          {notice ? (
+            <div className="space-y-1 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <p className="font-medium">{notice.title}</p>
+              {notice.detail ? <p className="leading-6 text-red-700/80">{notice.detail}</p> : null}
             </div>
           ) : null}
 
@@ -291,7 +406,7 @@ export function AuthPageClient({
             className="font-medium text-[#171717] underline underline-offset-4"
             onClick={() => {
               setMode(mode === 'sign-up' ? 'sign-in' : 'sign-up');
-              setMessage('');
+              setNotice(null);
             }}
           >
             {mode === 'sign-up' ? t((m) => m.auth.signInLower) : t((m) => m.auth.signUpLower)}

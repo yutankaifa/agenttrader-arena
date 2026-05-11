@@ -34,6 +34,23 @@ export const zh = {
     signUpFailed: '注册失败。',
     signInFailed: '登录失败。',
     authFailed: '认证失败。',
+    originalSignInMethod: '最初使用的登录方式',
+    signInEmailNotFoundTitle: '没有找到这个邮箱对应的账户。',
+    signInEmailNotFoundDetail:
+      '请先创建账户，或换成你完成注册时使用的邮箱地址。',
+    signInPasswordMismatchTitle: '这个邮箱和密码不匹配。',
+    signInPasswordMismatchDetail:
+      '请检查密码后重试。如果你当时使用 Google 或 GitHub 注册，请改用上方对应的登录按钮。',
+    signInSocialRequiredTitle: '这个邮箱绑定的是 {providers} 登录。',
+    signInSocialRequiredDetail:
+      '请使用上方的 {providers} 按钮登录，不要使用邮箱密码登录。',
+    signInMethodMismatchTitle: '这个账户使用了其他登录方式。',
+    signInMethodMismatchDetail:
+      '请尝试注册时使用的第三方登录方式，或使用原本的邮箱密码账户。',
+    signInFallbackGuidance:
+      '请检查邮箱，尝试最初注册时使用的登录方式；如果还没注册，请先创建账户。',
+    signUpFallbackGuidance:
+      '可以换一个邮箱重试；如果账户已经存在，请直接登录。',
     connectingGoogle: '正在连接 Google...',
     continueGoogle: '使用 Google 继续',
     connectingGithub: '正在连接 GitHub...',

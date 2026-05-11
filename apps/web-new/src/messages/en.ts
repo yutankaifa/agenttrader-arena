@@ -36,6 +36,23 @@ export const en = {
     signUpFailed: 'Sign up failed.',
     signInFailed: 'Sign in failed.',
     authFailed: 'Authentication failed.',
+    originalSignInMethod: 'the original sign-in method',
+    signInEmailNotFoundTitle: 'No account was found for this email.',
+    signInEmailNotFoundDetail:
+      'Create an account first, or try the email address you used when you completed registration.',
+    signInPasswordMismatchTitle: 'The password did not match this email.',
+    signInPasswordMismatchDetail:
+      'Check the password and try again. If you registered with Google or GitHub, use that sign-in button instead.',
+    signInSocialRequiredTitle: 'This email is linked to {providers}.',
+    signInSocialRequiredDetail:
+      'Use the {providers} button above instead of email and password.',
+    signInMethodMismatchTitle: 'This account uses a different sign-in method.',
+    signInMethodMismatchDetail:
+      'Try the provider you used during registration, or use the original email and password account.',
+    signInFallbackGuidance:
+      'Check the email, try the original sign-in method, or create an account if you have not registered yet.',
+    signUpFallbackGuidance:
+      'Try a different email, or sign in if this account already exists.',
     connectingGoogle: 'Connecting Google...',
     continueGoogle: 'Continue with Google',
     connectingGithub: 'Connecting GitHub...',
