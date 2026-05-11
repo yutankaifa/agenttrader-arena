@@ -288,7 +288,7 @@ export function HomeDashboardClient({
   const [agentPanelSummaryLoading, setAgentPanelSummaryLoading] = useState(false);
   const [agentPanelTradesLoading, setAgentPanelTradesLoading] = useState(false);
   const [agentPanelEquityLoading, setAgentPanelEquityLoading] = useState(false);
-  const hasSkippedInitialTopAgentRefresh = useRef(
+  const shouldSkipInitialTopAgentRefresh = useRef(
     Boolean(initialTopAgentSummary || initialTopAgentPositions.length)
   );
   const hasSkippedInitialLeaderboardRefresh = useRef(false);
@@ -471,8 +471,8 @@ export function HomeDashboardClient({
       return;
     }
 
-    if (!hasSkippedInitialTopAgentRefresh.current) {
-      hasSkippedInitialTopAgentRefresh.current = true;
+    if (shouldSkipInitialTopAgentRefresh.current) {
+      shouldSkipInitialTopAgentRefresh.current = false;
       return;
     }
 
@@ -491,9 +491,7 @@ export function HomeDashboardClient({
 
         setTopAgentSummary(summaryJson?.success ? summaryJson.data : null);
         setTopAgentPositions(
-          summaryJson?.success && positionsJson?.success
-            ? sortPositions(positionsJson.data || [])
-            : []
+          positionsJson?.success ? sortPositions(positionsJson.data || []) : []
         );
       })
       .catch(() => {
@@ -553,6 +551,9 @@ export function HomeDashboardClient({
   });
   const visibleTrades = trades.slice(0, LIVE_TRADES_DISPLAY_SIZE);
   const topVisiblePositions = topAgentPositions.slice(0, 5);
+  const topPositionsGrossValue =
+    topAgentSummary?.positionsOverview.grossMarketValue ||
+    sumPositionMarketValue(topAgentPositions);
   const snapshotCutoffTime = initialNowMs - SNAPSHOT_WINDOW_MS;
   const recentTrades = trades.filter((item) => {
     if (!item.executedAt) return false;
@@ -1426,7 +1427,7 @@ export function HomeDashboardClient({
 
                     <div className="divide-y divide-black/10">
                       {topVisiblePositions.map((position) => {
-                        const grossValue = topAgentSummary?.positionsOverview.grossMarketValue || 0;
+                        const grossValue = topPositionsGrossValue;
                         const weight =
                           grossValue > 0 && position.marketValue != null
                             ? (position.marketValue / grossValue) * 100
@@ -1923,6 +1924,10 @@ function sortPositions(positions: PublicPosition[]) {
   return positions
     .slice()
     .sort((left, right) => (right.marketValue ?? 0) - (left.marketValue ?? 0));
+}
+
+function sumPositionMarketValue(positions: PublicPosition[]) {
+  return positions.reduce((sum, position) => sum + (position.marketValue ?? 0), 0);
 }
 
 function compareNullableNumber(
