@@ -1,21 +1,14 @@
 'use client';
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
+import { HomeAgentPanel } from '@/components/home-agent-panel';
 import { HomeSkillCard } from '@/components/home-skill-card';
 import { useSiteLocale } from '@/components/site-locale-provider';
 import { cn } from '@/lib/cn';
 import { formatUsMarketDateTime } from '@/lib/us-market-time';
 import { US_MARKET_TIME_ZONE } from '@/lib/us-stock-market-core';
-
-const HomeAgentPanel = dynamic(
-  () => import('@/components/home-agent-panel').then((mod) => mod.HomeAgentPanel),
-  {
-    loading: () => <AgentPanelLoadingShell />,
-  }
-);
 
 type PublicStats = {
   agents: number;
@@ -802,9 +795,14 @@ export function HomeDashboardClient({
   const handleOpenAgentPanel = async (agentId: string) => {
     const requestId = agentPanelRequestIdRef.current + 1;
     agentPanelRequestIdRef.current = requestId;
+    const seedSummary = buildAgentPanelSummarySeed(
+      findAgentPanelSeed(agentId, leaderboardItems, leaderboardLeader),
+      leaderboardSnapshotAt
+    );
+    let hasPanelSummary = Boolean(seedSummary);
 
     setSelectedAgentId(agentId);
-    setAgentPanelSummary(null);
+    setAgentPanelSummary(seedSummary);
     setAgentPanelTrades([]);
     setAgentPanelEquity(null);
     setAgentPanelSummaryLoading(true);
@@ -813,58 +811,55 @@ export function HomeDashboardClient({
 
     try {
       const timeZone = US_MARKET_TIME_ZONE;
-      void fetchJson(
+      const summaryJson = await fetchJson(
         `/api/public/agents/${agentId}/summary?tz=${encodeURIComponent(timeZone)}&locale=${encodeURIComponent(localeTag)}`
-      )
-        .then((summaryJson) => {
-          if (agentPanelRequestIdRef.current !== requestId) return;
-          setAgentPanelSummary(summaryJson?.success ? summaryJson.data : null);
-        })
-        .catch(() => {
-          if (agentPanelRequestIdRef.current !== requestId) return;
-          setAgentPanelSummary(null);
-        })
-        .finally(() => {
-          if (agentPanelRequestIdRef.current !== requestId) return;
-          setAgentPanelSummaryLoading(false);
-        });
-
-      void fetchJson(`/api/public/agents/${agentId}/trades?page=1&pageSize=8&includeTotal=false`)
-        .then((tradesJson) => {
-          if (agentPanelRequestIdRef.current !== requestId) return;
-          setAgentPanelTrades(tradesJson?.success ? tradesJson.data || [] : []);
-        })
-        .catch(() => {
-          if (agentPanelRequestIdRef.current !== requestId) return;
-          setAgentPanelTrades([]);
-        })
-        .finally(() => {
-          if (agentPanelRequestIdRef.current !== requestId) return;
-          setAgentPanelTradesLoading(false);
-        });
-
-      void fetchJson(`/api/public/agents/${agentId}/equity?range=7d`)
-        .then((equityJson) => {
-          if (agentPanelRequestIdRef.current !== requestId) return;
-          setAgentPanelEquity(equityJson?.success ? equityJson.data || null : null);
-        })
-        .catch(() => {
-          if (agentPanelRequestIdRef.current !== requestId) return;
-          setAgentPanelEquity(null);
-        })
-        .finally(() => {
-          if (agentPanelRequestIdRef.current !== requestId) return;
-          setAgentPanelEquityLoading(false);
-        });
+      );
+      if (agentPanelRequestIdRef.current !== requestId) return;
+      const loadedSummary = summaryJson?.success ? summaryJson.data : null;
+      hasPanelSummary = Boolean(loadedSummary || seedSummary);
+      setAgentPanelSummary(loadedSummary || seedSummary);
+      setAgentPanelSummaryLoading(false);
     } catch {
       if (agentPanelRequestIdRef.current !== requestId) return;
-      setAgentPanelSummary(null);
-      setAgentPanelTrades([]);
-      setAgentPanelEquity(null);
+      hasPanelSummary = Boolean(seedSummary);
+      setAgentPanelSummary(seedSummary);
       setAgentPanelSummaryLoading(false);
+    }
+
+    if (agentPanelRequestIdRef.current !== requestId) return;
+    if (!hasPanelSummary) {
       setAgentPanelTradesLoading(false);
       setAgentPanelEquityLoading(false);
+      return;
     }
+
+    void fetchJson(`/api/public/agents/${agentId}/trades?page=1&pageSize=8&includeTotal=false`)
+      .then((tradesJson) => {
+        if (agentPanelRequestIdRef.current !== requestId) return;
+        setAgentPanelTrades(tradesJson?.success ? tradesJson.data || [] : []);
+      })
+      .catch(() => {
+        if (agentPanelRequestIdRef.current !== requestId) return;
+        setAgentPanelTrades([]);
+      })
+      .finally(() => {
+        if (agentPanelRequestIdRef.current !== requestId) return;
+        setAgentPanelTradesLoading(false);
+      });
+
+    void fetchJson(`/api/public/agents/${agentId}/equity?range=7d`)
+      .then((equityJson) => {
+        if (agentPanelRequestIdRef.current !== requestId) return;
+        setAgentPanelEquity(equityJson?.success ? equityJson.data || null : null);
+      })
+      .catch(() => {
+        if (agentPanelRequestIdRef.current !== requestId) return;
+        setAgentPanelEquity(null);
+      })
+      .finally(() => {
+        if (agentPanelRequestIdRef.current !== requestId) return;
+        setAgentPanelEquityLoading(false);
+      });
   };
 
   const closeAgentPanel = () => {
@@ -1507,19 +1502,6 @@ export function HomeDashboardClient({
   );
 }
 
-function AgentPanelLoadingShell() {
-  return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/28" />
-      <div className="absolute inset-y-0 right-0 w-full max-w-[560px] overflow-y-auto border-l border-black/10 bg-[#f6f6f3] shadow-[-10px_0_40px_rgba(0,0,0,0.08)]">
-        <div className="space-y-5 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
-          <LoadingRows rows={8} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function LoadingRows({ rows = 5 }: { rows?: number }) {
   return (
     <div className="space-y-2">
@@ -1882,6 +1864,54 @@ function StatusPill({
       {children}
     </span>
   );
+}
+
+function findAgentPanelSeed(
+  agentId: string,
+  leaderboardItems: LeaderboardEntry[],
+  leaderboardLeader: LeaderboardEntry | null
+) {
+  if (leaderboardLeader?.agentId === agentId) {
+    return leaderboardLeader;
+  }
+  return leaderboardItems.find((item) => item.agentId === agentId) ?? null;
+}
+
+function buildAgentPanelSummarySeed(
+  agent: LeaderboardEntry | null,
+  snapshotAt: string | null
+): PublicAgentSummary | null {
+  if (!agent) return null;
+  const rank = Number(agent.rank);
+
+  return {
+    agent: {
+      id: agent.agentId,
+      name: agent.agentName,
+      description: null,
+      avatarUrl: agent.agentAvatar ?? null,
+      modelName: agent.modelName,
+      primaryMarket: null,
+      marketPreferences: null,
+      lastHeartbeatAt: null,
+    },
+    performance: {
+      rank: Number.isFinite(rank) ? rank : null,
+      topTier: agent.topTier,
+      totalEquity: agent.equityValue,
+      returnRate: agent.returnRate,
+      drawdown: agent.drawdown,
+      snapshotAt,
+      riskTag: agent.riskTag,
+      closeOnly: agent.closeOnly,
+    },
+    positionsOverview: {
+      grossMarketValue: Number.NaN,
+    },
+    dailySummary: {
+      summary: '',
+    },
+  };
 }
 
 async function fetchJson(url: string) {

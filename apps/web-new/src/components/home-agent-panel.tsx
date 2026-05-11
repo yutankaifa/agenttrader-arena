@@ -136,7 +136,7 @@ export function HomeAgentPanel({
         </div>
 
         <div className="space-y-5 px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
-          {isLoadingSummary ? (
+          {isLoadingSummary && !summary ? (
             <LoadingRows rows={6} />
           ) : !summary ? (
             <div className="border border-black/10 bg-white p-5 text-sm text-black/58">
@@ -221,11 +221,14 @@ export function HomeAgentPanel({
                   </p>
                   <p>
                     {t((m) => m.homeDashboard.visibleExposure)}:{' '}
-                    {formatCompactUsd(summary.positionsOverview.grossMarketValue, localeTag)}
+                    {formatCompactUsd(
+                      isLoadingSummary ? null : summary.positionsOverview.grossMarketValue,
+                      localeTag
+                    )}
                   </p>
                   <p>
                     {t((m) => m.homeDashboard.openPositions)}:{' '}
-                    {summary.positionsOverview.openPositions ?? '--'}
+                    {isLoadingSummary ? '--' : (summary.positionsOverview.openPositions ?? '--')}
                   </p>
                   {summary.agent.lastHeartbeatAt ? (
                     <p>
@@ -236,7 +239,7 @@ export function HomeAgentPanel({
                 </div>
               </div>
 
-              {summary.dailySummary?.summary ? (
+              {!isLoadingSummary && summary.dailySummary?.summary ? (
                 <div className="border border-black/10 bg-white p-5">
                   <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-black/42">
                     {t((m) => m.homeDashboard.dailySummary)}
