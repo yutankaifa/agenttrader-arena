@@ -13,6 +13,25 @@ import {
 } from '@/lib/public-trade-meta';
 import { formatRelativeTimestamp } from '@/lib/relative-time';
 
+type XLinkFeedback = {
+  tone: 'neutral' | 'success' | 'error';
+  message: string;
+};
+
+type XUrlUpdateResponse =
+  | {
+      success: true;
+      data: {
+        xUrl: string | null;
+      };
+    }
+  | {
+      success: false;
+      error?: {
+        message?: string;
+      };
+    };
+
 function StatusBadge({ status }: { status: string }) {
   const { t } = useSiteLocale();
   const colors: Record<string, string> = {
@@ -34,6 +53,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function getSharedXLink(agents: Array<{ xUrl?: string | null }>) {
+  return agents.find((agent) => typeof agent.xUrl === 'string' && agent.xUrl.trim())?.xUrl ?? '';
+}
+
 export function MyAgentPageClient() {
   const router = useRouter();
   const { localeTag, t } = useSiteLocale();
@@ -42,6 +65,8 @@ export function MyAgentPageClient() {
     {}
   );
   const [xLinkDraft, setXLinkDraft] = useState('');
+  const [savedXLink, setSavedXLink] = useState('');
+  const [xLinkFeedback, setXLinkFeedback] = useState<XLinkFeedback | null>(null);
   const [savingXLink, setSavingXLink] = useState(false);
 
   const currencyFormatter = useMemo(
@@ -69,10 +94,15 @@ export function MyAgentPageClient() {
   }, [router, session?.user, sessionPending]);
 
   useEffect(() => {
-    const sharedXLink =
-      agents.find((agent) => typeof agent.xUrl === 'string' && agent.xUrl.trim())?.xUrl ?? '';
+    const sharedXLink = getSharedXLink(agents);
+    setSavedXLink(sharedXLink);
     setXLinkDraft(sharedXLink);
   }, [agents]);
+
+  const hasUnsavedXLink = xLinkDraft.trim() !== savedXLink.trim();
+  const savedXLinkDisplay = savedXLink
+    ? savedXLink.replace(/^https?:\/\/(www\.)?/i, '')
+    : '';
 
   async function runAgentAction(agentId: string, action: 'pause' | 'resume' | 'delete') {
     setPendingActionById((current) => ({ ...current, [agentId]: action }));
@@ -116,7 +146,9 @@ export function MyAgentPageClient() {
 
   async function saveXUrlForAllAgents() {
     setSavingXLink(true);
+    setXLinkFeedback(null);
     try {
+      let normalizedXUrl: string | null = null;
       for (const agent of agents) {
         const response = await fetch(`/api/agents/${agent.id}`, {
           method: 'PATCH',
@@ -128,14 +160,38 @@ export function MyAgentPageClient() {
           }),
         });
 
+        const payload = (await response.json().catch(() => null)) as XUrlUpdateResponse | null;
         if (!response.ok) {
-          throw new Error('Failed to save X URL');
+          throw new Error(
+            payload?.success === false && payload.error?.message
+              ? payload.error.message
+              : 'Failed to save X URL'
+          );
+        }
+
+        if (payload?.success) {
+          normalizedXUrl = payload.data.xUrl;
         }
       }
 
+      const nextSavedXLink = normalizedXUrl ?? '';
+      setSavedXLink(nextSavedXLink);
+      setXLinkDraft(nextSavedXLink);
+      setXLinkFeedback({
+        tone: 'success',
+        message: nextSavedXLink
+          ? t((m) => m.myAgent.xLinkSaved).replace('{count}', String(agents.length))
+          : t((m) => m.myAgent.xLinkRemoved).replace('{count}', String(agents.length)),
+      });
       await loadAgents();
-    } catch {
-      window.alert(t((m) => m.myAgent.xLinkSaveFailed));
+    } catch (error) {
+      setXLinkFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : t((m) => m.myAgent.xLinkSaveFailed),
+      });
     } finally {
       setSavingXLink(false);
     }
@@ -172,25 +228,83 @@ export function MyAgentPageClient() {
 
         {agents.length > 0 ? (
           <div className="w-full max-w-xl border border-black/10 bg-white p-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="shrink-0 text-sm text-black/56">{t((m) => m.myAgent.xLink)}</span>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-[#171717]">
+                  {t((m) => m.myAgent.xLinkTitle)}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-black/56">
+                  {t((m) => m.myAgent.xLinkDescription)}
+                </p>
+              </div>
+              <div className="shrink-0">
+                {savedXLink ? (
+                  <a
+                    href={savedXLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-8 items-center border border-black/10 px-2.5 text-xs font-medium text-[#171717] transition hover:bg-[#fafafa]"
+                  >
+                    {t((m) => m.myAgent.xLinkViewSaved)}
+                  </a>
+                ) : (
+                  <span className="inline-flex h-8 items-center border border-black/10 px-2.5 text-xs font-medium text-black/48">
+                    {t((m) => m.myAgent.xLinkEmptyState)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   value={xLinkDraft}
-                  onChange={(event) => setXLinkDraft(event.target.value)}
+                  onChange={(event) => {
+                    setXLinkDraft(event.target.value);
+                    setXLinkFeedback(
+                      event.target.value.trim() === savedXLink.trim()
+                        ? null
+                        : {
+                            tone: 'neutral',
+                            message: t((m) => m.myAgent.xLinkUnsaved),
+                          }
+                    );
+                  }}
                   placeholder={t((m) => m.myAgent.xLinkPlaceholder)}
                   className="h-10 min-w-0 flex-1 border border-black/10 px-3 text-sm text-[#171717] outline-none transition focus:border-black/24"
                 />
                 <button
                   type="button"
                   onClick={() => void saveXUrlForAllAgents()}
-                  disabled={savingXLink}
+                  disabled={savingXLink || !hasUnsavedXLink}
                   className="inline-flex h-10 items-center justify-center border border-black/10 px-3 text-sm font-medium text-[#171717] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {savingXLink
                     ? t((m) => m.myAgent.xLinkSaving)
-                    : t((m) => m.myAgent.xLinkSave)}
+                    : hasUnsavedXLink
+                      ? t((m) => m.myAgent.xLinkSave)
+                      : t((m) => m.myAgent.xLinkSavedButton)}
                 </button>
+              </div>
+
+              <div
+                aria-live="polite"
+                className={cn(
+                  'min-h-5 text-xs leading-5',
+                  xLinkFeedback?.tone === 'success'
+                    ? 'text-emerald-700'
+                    : xLinkFeedback?.tone === 'error'
+                      ? 'text-red-700'
+                      : 'text-black/48'
+                )}
+              >
+                {xLinkFeedback?.message ??
+                  (savedXLink
+                    ? t((m) => m.myAgent.xLinkSavedState).replace(
+                        '{value}',
+                        savedXLinkDisplay
+                      )
+                    : t((m) => m.myAgent.xLinkEmptyHint))}
               </div>
             </div>
           </div>
