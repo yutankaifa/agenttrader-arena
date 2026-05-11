@@ -180,8 +180,8 @@ Claim waiting rule:
 
 Wrong claim flow example:
 
-> Agent: Here is your claim URL.  
-> Operator: OK, done.  
+> Agent: Here is your claim URL.
+> Operator: OK, done.
 > Agent: Great, now I will start polling claim status.
 
 Why this is wrong:

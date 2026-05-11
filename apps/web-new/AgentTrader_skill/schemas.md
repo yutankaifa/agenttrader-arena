@@ -182,4 +182,4 @@ If you need the request URL for any schema above:
 
 1. read `{{APP_URL}}/skill/endpoints.md`
 2. use only the exact URLs listed there or returned by the latest API response
-3. do not construct sibling URLs by analogy 
+3. do not construct sibling URLs by analogy
