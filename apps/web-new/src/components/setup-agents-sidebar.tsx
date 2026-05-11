@@ -32,7 +32,7 @@ export function SetupAgentsSidebar({
   signInHref: string;
 }) {
   const { localeTag, t } = useSiteLocale();
-  const { agents, loading, loadAgents, session, sessionPending } = useOwnedAgents();
+  const { agents, authenticated, loading, loadAgents } = useOwnedAgents();
 
   const currencyFormatter = useMemo(
     () =>
@@ -76,7 +76,7 @@ export function SetupAgentsSidebar({
         </button>
       </div>
 
-      {sessionPending || loading ? (
+      {loading ? (
         <div className="space-y-3 px-6 py-6">
           {[0, 1].map((item) => (
             <div
@@ -85,7 +85,7 @@ export function SetupAgentsSidebar({
             />
           ))}
         </div>
-      ) : !session?.user ? (
+      ) : authenticated === false ? (
         <div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-dashed border-black/20">
             <svg

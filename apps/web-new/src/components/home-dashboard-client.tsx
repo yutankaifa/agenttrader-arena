@@ -295,7 +295,10 @@ export function HomeDashboardClient({
   const [agentPanelSummaryLoading, setAgentPanelSummaryLoading] = useState(false);
   const [agentPanelTradesLoading, setAgentPanelTradesLoading] = useState(false);
   const [agentPanelEquityLoading, setAgentPanelEquityLoading] = useState(false);
-  const hasSkippedInitialTopAgentRefresh = useRef(false);
+  const hasSkippedInitialTopAgentRefresh = useRef(
+    Boolean(initialTopAgentSummary || initialTopAgentPositions.length)
+  );
+  const hasSkippedInitialLeaderboardRefresh = useRef(false);
   const [initialNowMs] = useState(() => Date.now());
   const agentPanelRequestIdRef = useRef(0);
 
@@ -425,7 +428,16 @@ export function HomeDashboardClient({
       void refreshHomeOverview();
     };
 
-    void refreshLeaderboard(true);
+    if (
+      hasSkippedInitialLeaderboardRefresh.current ||
+      leaderboardPage !== initialLeaderboard.page ||
+      initialLeaderboard.items.length === 0
+    ) {
+      void refreshLeaderboard(true);
+    } else {
+      hasSkippedInitialLeaderboardRefresh.current = true;
+    }
+    void refreshHomeOverview();
 
     const statsTimer = window.setInterval(refreshStats, STATS_REFRESH_MS);
     const leaderboardTimer = window.setInterval(

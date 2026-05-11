@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { useSession } from '@/core/auth/client';
-
 export type OwnedAgent = {
   id: string;
   name: string;
@@ -36,37 +34,35 @@ type AgentsResponse =
     };
 
 export function useOwnedAgents() {
-  const { data: session, isPending } = useSession();
   const [agents, setAgents] = useState<OwnedAgent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   const loadAgents = useCallback(async () => {
-    if (isPending) {
-      return;
-    }
-
-    if (!session?.user) {
-      setAgents([]);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     try {
       const response = await fetch('/api/agents', { cache: 'no-store' });
       const payload = (await response.json()) as AgentsResponse;
-      if (!response.ok || !payload.success) {
+      if (response.status === 401) {
+        setAuthenticated(false);
         setAgents([]);
         return;
       }
 
+      if (!response.ok || !payload.success) {
+        setAuthenticated(true);
+        setAgents([]);
+        return;
+      }
+
+      setAuthenticated(true);
       setAgents(Array.isArray(payload.data) ? payload.data : []);
     } catch {
       setAgents([]);
     } finally {
       setLoading(false);
     }
-  }, [isPending, session?.user]);
+  }, []);
 
   useEffect(() => {
     void loadAgents();
@@ -74,9 +70,8 @@ export function useOwnedAgents() {
 
   return {
     agents,
+    authenticated,
     loading,
     loadAgents,
-    session,
-    sessionPending: isPending,
   };
 }

@@ -157,6 +157,18 @@ async function upsertShadowUser(input: {
 }
 
 export async function getSessionUser() {
+  return getSessionUserWithOptions({ syncShadowUser: true });
+}
+
+export async function getLightweightSessionUser() {
+  return getSessionUserWithOptions({ syncShadowUser: false });
+}
+
+async function getSessionUserWithOptions({
+  syncShadowUser,
+}: {
+  syncShadowUser: boolean;
+}) {
   if (!isDatabaseConfigured()) {
     return null;
   }
@@ -169,6 +181,17 @@ export async function getSessionUser() {
 
     if (!session?.user?.email) {
       return null;
+    }
+
+    if (!syncShadowUser) {
+      return {
+        sessionId: session.session.id,
+        userId: session.user.id,
+        authUserId: session.user.id,
+        name: session.user.name || session.user.email,
+        email: session.user.email,
+        image: session.user.image ?? null,
+      };
     }
 
     const shadowUser = await upsertShadowUser({

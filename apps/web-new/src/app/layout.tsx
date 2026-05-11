@@ -8,7 +8,7 @@ import { TopNav } from '@/components/top-nav';
 import { isPostgresBackedMode } from '@/lib/database-mode';
 import { getSiteLocaleTag } from '@/lib/site-locale';
 import { getRequestSiteLocale } from '@/lib/site-locale-server';
-import { getSessionUser } from '@/lib/server-session';
+import { getLightweightSessionUser } from '@/lib/server-session';
 
 export const metadata: Metadata = {
   title: 'AgentTrader Arena',
@@ -27,7 +27,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const authEnabled = isPostgresBackedMode();
-  const user = authEnabled ? await getSessionUser() : null;
+  const user = authEnabled ? await getLightweightSessionUser() : null;
   const locale = await getRequestSiteLocale();
   const localeTag = getSiteLocaleTag(locale);
 

@@ -60,7 +60,7 @@ function getSharedXLink(agents: Array<{ xUrl?: string | null }>) {
 export function MyAgentPageClient() {
   const router = useRouter();
   const { localeTag, t } = useSiteLocale();
-  const { agents, loading, loadAgents, session, sessionPending } = useOwnedAgents();
+  const { agents, authenticated, loading, loadAgents } = useOwnedAgents();
   const [pendingActionById, setPendingActionById] = useState<Record<string, string>>(
     {}
   );
@@ -88,10 +88,10 @@ export function MyAgentPageClient() {
   );
 
   useEffect(() => {
-    if (!sessionPending && !session?.user) {
+    if (!loading && authenticated === false) {
       router.push('/sign-in?callbackURL=/my-agent');
     }
-  }, [router, session?.user, sessionPending]);
+  }, [authenticated, loading, router]);
 
   useEffect(() => {
     const sharedXLink = getSharedXLink(agents);
@@ -197,7 +197,7 @@ export function MyAgentPageClient() {
     }
   }
 
-  if (sessionPending || loading) {
+  if (loading) {
     return (
       <div className="mx-auto max-w-6xl px-6 pb-12 pt-24 md:pb-16 md:pt-28">
         <div className="animate-pulse space-y-4">
@@ -218,8 +218,8 @@ export function MyAgentPageClient() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 pb-12 pt-24 md:pb-16 md:pt-28">
-      <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+      <div className="mb-8 space-y-5">
+        <div className="max-w-2xl">
           <h1 className="text-3xl font-semibold tracking-tight text-[#171717]">
             {t((m) => m.myAgent.title)}
           </h1>
@@ -227,36 +227,23 @@ export function MyAgentPageClient() {
         </div>
 
         {agents.length > 0 ? (
-          <div className="w-full max-w-xl border border-black/10 bg-white p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-[#171717]">
-                  {t((m) => m.myAgent.xLinkTitle)}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-black/56">
+          <div className="border border-black/10 bg-white px-4 py-3">
+            <div className="grid gap-3 lg:grid-cols-[minmax(220px,0.85fr)_minmax(320px,1fr)_auto] lg:items-center">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold text-[#171717]">
+                    {t((m) => m.myAgent.xLinkTitle)}
+                  </p>
+                  <span className="inline-flex h-6 items-center border border-black/10 px-2 text-xs font-medium text-black/48">
+                    {savedXLink ? savedXLinkDisplay : t((m) => m.myAgent.xLinkEmptyState)}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-black/48">
                   {t((m) => m.myAgent.xLinkDescription)}
                 </p>
               </div>
-              <div className="shrink-0">
-                {savedXLink ? (
-                  <a
-                    href={savedXLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-8 items-center border border-black/10 px-2.5 text-xs font-medium text-[#171717] transition hover:bg-[#fafafa]"
-                  >
-                    {t((m) => m.myAgent.xLinkViewSaved)}
-                  </a>
-                ) : (
-                  <span className="inline-flex h-8 items-center border border-black/10 px-2.5 text-xs font-medium text-black/48">
-                    {t((m) => m.myAgent.xLinkEmptyState)}
-                  </span>
-                )}
-              </div>
-            </div>
 
-            <div className="mt-4 flex flex-col gap-2">
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="min-w-0">
                 <input
                   value={xLinkDraft}
                   onChange={(event) => {
@@ -271,8 +258,40 @@ export function MyAgentPageClient() {
                     );
                   }}
                   placeholder={t((m) => m.myAgent.xLinkPlaceholder)}
-                  className="h-10 min-w-0 flex-1 border border-black/10 px-3 text-sm text-[#171717] outline-none transition focus:border-black/24"
+                  className="h-10 w-full border border-black/10 px-3 text-sm text-[#171717] outline-none transition focus:border-black/24"
                 />
+                <div
+                  aria-live="polite"
+                  className={cn(
+                    'mt-1 min-h-5 text-xs leading-5',
+                    xLinkFeedback?.tone === 'success'
+                      ? 'text-emerald-700'
+                      : xLinkFeedback?.tone === 'error'
+                        ? 'text-red-700'
+                        : 'text-black/48'
+                  )}
+                >
+                  {xLinkFeedback?.message ??
+                    (savedXLink
+                      ? t((m) => m.myAgent.xLinkSavedState).replace(
+                          '{value}',
+                          savedXLinkDisplay
+                        )
+                      : t((m) => m.myAgent.xLinkEmptyHint))}
+                </div>
+              </div>
+
+              <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+                {savedXLink ? (
+                  <a
+                    href={savedXLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-10 items-center justify-center border border-black/10 px-3 text-sm font-medium text-[#171717] transition hover:bg-[#fafafa]"
+                  >
+                    {t((m) => m.myAgent.xLinkViewSaved)}
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => void saveXUrlForAllAgents()}
@@ -285,26 +304,6 @@ export function MyAgentPageClient() {
                       ? t((m) => m.myAgent.xLinkSave)
                       : t((m) => m.myAgent.xLinkSavedButton)}
                 </button>
-              </div>
-
-              <div
-                aria-live="polite"
-                className={cn(
-                  'min-h-5 text-xs leading-5',
-                  xLinkFeedback?.tone === 'success'
-                    ? 'text-emerald-700'
-                    : xLinkFeedback?.tone === 'error'
-                      ? 'text-red-700'
-                      : 'text-black/48'
-                )}
-              >
-                {xLinkFeedback?.message ??
-                  (savedXLink
-                    ? t((m) => m.myAgent.xLinkSavedState).replace(
-                        '{value}',
-                        savedXLinkDisplay
-                      )
-                    : t((m) => m.myAgent.xLinkEmptyHint))}
               </div>
             </div>
           </div>

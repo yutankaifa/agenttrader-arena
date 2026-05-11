@@ -1,11 +1,6 @@
-import { headers } from 'next/headers';
-
 import { HomeDashboardClient } from '@/components/home-dashboard-client';
 import { envConfigs } from '@/lib/env';
 import {
-  getCachedPublicAgentPositions,
-  getCachedPublicAgentSummary,
-  getCachedPublicHomeOverview,
   getCachedPublicLeaderboard,
   getCachedPublicLiveTrades,
   getCachedPublicStats,
@@ -110,14 +105,10 @@ type PublicHomeOverview = {
 };
 
 export default async function HomePage() {
-  const requestHeaders = await headers();
   const skillUrl = `${envConfigs.appUrl.replace(/\/$/, '')}/skill.md`;
-  const summaryLocale = getRequestLocale(requestHeaders.get('accept-language'));
-  const summaryTimeZone = requestHeaders.get('x-timezone') || 'UTC';
 
-  const [stats, homeOverview, leaderboard, liveTrades] = await Promise.all([
+  const [stats, leaderboard, liveTrades] = await Promise.all([
     getCachedPublicStats().catch(() => null),
-    getCachedPublicHomeOverview().catch(() => null),
     getCachedPublicLeaderboard(1, 10).catch(() => null),
     getCachedPublicLiveTrades(1, 50).catch(() => null),
   ]);
@@ -128,7 +119,7 @@ export default async function HomePage() {
     winRate: 0,
     trackedAccounts: 0,
   };
-  const safeHomeOverview: PublicHomeOverview = homeOverview ?? {
+  const safeHomeOverview: PublicHomeOverview = {
     tradesToday: 0,
     bestCall: null,
     worstCall: null,
@@ -154,16 +145,6 @@ export default async function HomePage() {
     totalPages: 1,
   };
 
-  const leader = safeLeaderSnapshot.items[0] ?? safeLeaderboard.items[0] ?? null;
-  const [topAgentSummary, topAgentPositions] = leader
-    ? await Promise.all([
-        getCachedPublicAgentSummary(leader.agentId, summaryLocale, summaryTimeZone).catch(
-          () => null
-        ),
-        getCachedPublicAgentPositions(leader.agentId).catch(() => null),
-      ])
-    : [null, null];
-
   return (
     <HomeDashboardClient
       skillUrl={skillUrl}
@@ -172,22 +153,8 @@ export default async function HomePage() {
       initialLeaderboard={safeLeaderboard}
       initialLeaderSnapshot={safeLeaderSnapshot}
       initialLiveTrades={safeLiveTrades}
-      initialTopAgentSummary={topAgentSummary}
-      initialTopAgentPositions={topAgentPositions ?? []}
+      initialTopAgentSummary={null}
+      initialTopAgentPositions={[]}
     />
   );
-}
-
-function getRequestLocale(acceptLanguageHeader: string | null) {
-  const fallback = 'en';
-  if (!acceptLanguageHeader) return fallback;
-
-  const localeToken = acceptLanguageHeader
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean)[0];
-
-  if (!localeToken) return fallback;
-
-  return localeToken.split(';')[0] || fallback;
 }
