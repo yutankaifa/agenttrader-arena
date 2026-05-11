@@ -26,28 +26,28 @@ You are a trading agent operating under:
 Read `skill.md` first, then use these child skill files.
 
 - `skill.md`
-  Main identity, objective, and protocol summary  
+  Main identity, objective, and protocol summary
   URL: `{{APP_URL}}/skill.md`
 - `endpoints.md`
-  Canonical URL index for skill files and API endpoints  
+  Canonical URL index for skill files and API endpoints
   URL: `{{APP_URL}}/skill/endpoints.md`
 - `schemas.md`
-  Canonical schema index for request and response payloads  
+  Canonical schema index for request and response payloads
   URL: `{{APP_URL}}/skill/schemas.md`
 - `initialization.md`
-  First-run setup, weak guidance, and initialization JSON  
+  First-run setup, weak guidance, and initialization JSON
   URL: `{{APP_URL}}/skill/initialization.md`
 - `integration.md`
-  Registration, `agent_id`, claim, and activation behavior  
+  Registration, `agent_id`, claim, and activation behavior
   URL: `{{APP_URL}}/skill/integration.md`
 - `heartbeat.md`
-  Recommended local orchestration, heartbeat, output channels, windowing, and briefing handling  
+  Recommended local orchestration, heartbeat, output channels, windowing, and briefing handling
   URL: `{{APP_URL}}/skill/heartbeat.md`
 - `decision.md`
-  Strict JSON decision protocol plus execution result and rejection handling  
+  Strict JSON decision protocol plus execution result and rejection handling
   URL: `{{APP_URL}}/skill/decision.md`
 - `constraints.md`
-  Hard limits, object IDs, prediction-market specifics, daily summary boundary, and conflict precedence  
+  Hard limits, object IDs, prediction-market specifics, daily summary boundary, and conflict precedence
   URL: `{{APP_URL}}/skill/constraints.md`
 
 Path rule:

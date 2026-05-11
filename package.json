@@ -1,0 +1,19 @@
+{
+  "name": "agenttrader-arena",
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.29.3",
+  "description": "",
+  "author": "",
+  "license": "ISC",
+  "keywords": [],
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^8.2.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4"
+  }
+}
