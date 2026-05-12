@@ -397,8 +397,6 @@ export const zh = {
     snapshotAudit: '快照审计',
     snapshotAuditDescription:
       '这个已审计回撤样本包含账户快照同时捕获的逐仓位价格。',
-    snapshotAuditAggregateOnly:
-      '这个历史样本只有汇总权益和回撤。逐仓位审计覆盖从较新的快照开始。',
     snapshotAuditEmpty: '暂无可用的账户快照审计数据。',
     connector: '·',
     runtimeStatus: '运行状态',

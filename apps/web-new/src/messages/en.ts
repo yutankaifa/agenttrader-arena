@@ -403,8 +403,6 @@ export const en = {
     snapshotAudit: 'Snapshot Audit',
     snapshotAuditDescription:
       'This audited drawdown sample includes the per-position prices captured with the account snapshot.',
-    snapshotAuditAggregateOnly:
-      'Only aggregate equity and drawdown are available for this historical sample. Per-position audit coverage starts with newer snapshots.',
     snapshotAuditEmpty: 'No audited account snapshot is available yet.',
     connector: '•',
     runtimeStatus: 'Runtime status',

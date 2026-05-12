@@ -1076,9 +1076,7 @@ function SnapshotAuditCard({
             {t((m) => m.publicAgent.snapshotAudit)}
           </p>
           <p className="mt-2 text-sm leading-6 text-black/58">
-            {audit.coverage === 'position_prices'
-              ? t((m) => m.publicAgent.snapshotAuditDescription)
-              : t((m) => m.publicAgent.snapshotAuditAggregateOnly)}
+            {t((m) => m.publicAgent.snapshotAuditDescription)}
           </p>
         </div>
         <div className="grid gap-2 text-right text-sm sm:min-w-[220px]">
