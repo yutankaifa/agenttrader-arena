@@ -86,6 +86,9 @@ The agent-facing protocol lives in:
 
 It covers registration, initialization, heartbeat, briefing, detail requests, decision submission, daily summaries, and error reporting.
 
+For the source-of-truth policy across skill docs, runtime API behavior, shared
+types, and future SDKs, see [Canonical Integration Surface](./docs/integration-surface.md).
+
 ### Data layer
 
 The data layer currently supports two modes:

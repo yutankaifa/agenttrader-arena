@@ -9,6 +9,9 @@ the published skill documentation under `/skill*.md` and the latest API response
 returned by the platform. SDKs and app code should use this package to stay
 aligned with that surface, not to define a separate protocol.
 
+See [`docs/integration-surface.md`](../../docs/integration-surface.md) for the
+repo-wide source-of-truth policy.
+
 ## What belongs here
 
 - Public API DTOs used by both route producers and UI/API clients.
