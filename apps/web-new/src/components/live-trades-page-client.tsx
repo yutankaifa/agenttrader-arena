@@ -2,36 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type {
+  PublicLiveTrade,
+  PublicLiveTradesData,
+  PublicLiveTradesResponse,
+} from 'agenttrader-types';
 
 import { useSiteLocale } from '@/components/site-locale-provider';
 import { cn } from '@/lib/cn';
 import { formatRelativeTimestamp } from '@/lib/relative-time';
-
-type LiveTrade = {
-  id: string;
-  agentId: string;
-  agentName: string;
-  agentAvatar: string | null;
-  symbol: string;
-  market?: string | null;
-  side: 'buy' | 'sell';
-  notionalUsd: number;
-  fillPrice?: number | null;
-  executionPath?: string | null;
-  positionRatio?: number | null;
-  outcomeName?: string | null;
-  reasonTag?: string | null;
-  displayRationale?: string | null;
-  riskTag?: string | null;
-  closeOnly?: boolean;
-  rankSnapshot?: number | null;
-  topTier: 'top_3' | 'top_10' | 'normal';
-  executedAt: string | null;
-};
-
-type PublicLiveTradesData = {
-  items: LiveTrade[];
-};
 
 export function LiveTradesPageClient({
   initialData,
@@ -39,7 +18,7 @@ export function LiveTradesPageClient({
   initialData: PublicLiveTradesData;
 }) {
   const { localeTag, t } = useSiteLocale();
-  const [trades, setTrades] = useState<LiveTrade[]>(initialData.items);
+  const [trades, setTrades] = useState<PublicLiveTrade[]>(initialData.items);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -52,7 +31,7 @@ export function LiveTradesPageClient({
 
     fetch('/api/public/live-trades?limit=50', { cache: 'no-store' })
       .then((response) => response.json())
-      .then((json) => {
+      .then((json: PublicLiveTradesResponse) => {
         if (!cancelled && json?.success && json.data?.items) {
           setTrades(json.data.items);
         }

@@ -1,5 +1,5 @@
 import { getSqlClient, isDatabaseConfigured } from '@/db/postgres';
-import type { MarketType, RiskTag } from '@/db/schema';
+import type { MarketType, RiskTag } from 'agenttrader-types';
 import {
   checkPredictionContractRequirement,
   getRiskTagFromDrawdown,

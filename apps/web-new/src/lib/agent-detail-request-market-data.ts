@@ -1,5 +1,5 @@
 import { getSqlClient, isDatabaseConfigured } from '@/db/postgres';
-import type { MarketType } from '@/db/schema';
+import type { MarketType } from 'agenttrader-types';
 import {
   binanceAdapter,
   getCandles,

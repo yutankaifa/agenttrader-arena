@@ -2,6 +2,15 @@
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import type {
+  HomeCallInsight,
+  PublicHomeOverview,
+  PublicLeaderboardData,
+  PublicLeaderboardEntry,
+  PublicLiveTrade,
+  PublicLiveTradesData,
+  PublicStats,
+} from 'agenttrader-types';
 
 import { HomeAgentPanel } from '@/components/home-agent-panel';
 import { HomeSkillCard } from '@/components/home-skill-card';
@@ -10,106 +19,8 @@ import { cn } from '@/lib/cn';
 import { formatUsMarketDateTime } from '@/lib/us-market-time';
 import { US_MARKET_TIME_ZONE } from '@/lib/us-stock-market-core';
 
-type PublicStats = {
-  agents: number;
-  capitalTracked: number;
-  winRate: number;
-  trackedAccounts?: number;
-};
-
-type LeaderboardEntry = {
-  rank: number | string;
-  agentId: string;
-  agentName: string;
-  agentAvatar?: string | null;
-  returnRate: number;
-  equityValue: number;
-  change24h: number | null;
-  drawdown: number | null;
-  modelName: string | null;
-  topTier: 'top_3' | 'top_10' | 'normal';
-  rankChange24h: number;
-  riskTag?: string | null;
-  closeOnly?: boolean;
-};
-
-type PublicLeaderboardData = {
-  items: LeaderboardEntry[];
-  snapshotAt: string | null;
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
-
-type LiveTradeItem = {
-  id: string;
-  agentId: string;
-  agentName: string;
-  agentAvatar?: string | null;
-  symbol: string;
-  market?: string | null;
-  side: 'buy' | 'sell' | 'BUY' | 'SELL' | string;
-  notionalUsd: number;
-  fillPrice?: number | null;
-  executionPath?: string | null;
-  positionRatio?: number | null;
-  outcomeName?: string | null;
-  reasonTag?: string | null;
-  displayRationale?: string | null;
-  riskTag?: string | null;
-  closeOnly?: boolean;
-  rankSnapshot?: number | null;
-  topTier?: 'top_3' | 'top_10' | 'normal';
-  executedAt: string | null;
-};
-
-type PublicLiveTradesData = {
-  items: LiveTradeItem[];
-};
-
-type HomeCallInsight = {
-  agentId: string;
-  agentName: string;
-  agentAvatar?: string | null;
-  symbol: string;
-  market: string;
-  side: string;
-  outcomeName?: string | null;
-  reasonTag?: string | null;
-  displayRationale?: string | null;
-  filledUnits: number;
-  fillPrice: number;
-  markPrice: number;
-  callPnlUsd: number;
-  currentRank?: number | null;
-  executedAt: string | null;
-};
-
-type PublicHomeOverview = {
-  tradesToday: number;
-  bestCall: HomeCallInsight | null;
-  worstCall: HomeCallInsight | null;
-  biggestTrade:
-    | (LiveTradeItem & {
-        agentName: string;
-        agentAvatar?: string | null;
-      })
-    | null;
-  largestPosition:
-    | {
-        agentId: string;
-        agentName: string;
-        symbol: string;
-        market: string;
-        outcomeName?: string | null;
-        positionSize: number | null;
-        entryPrice: number | null;
-        marketPrice: number | null;
-        marketValue: number;
-      }
-    | null;
-};
+type LeaderboardEntry = PublicLeaderboardEntry;
+type LiveTradeItem = PublicLiveTrade;
 
 type PublicAgentSummary = {
   agent: {

@@ -1,5 +1,5 @@
 import { getSqlClient, isDatabaseConfigured } from '@/db/postgres';
-import type { AgentClaimStatus } from '@/db/schema';
+import type { AgentClaimStatus } from 'agenttrader-types';
 import {
   COMPETITION_PHASE,
   LEADERBOARD_MIN_EXECUTED_ACTIONS,

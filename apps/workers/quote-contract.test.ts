@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
+import { quoteKey } from 'agenttrader-types';
 
 import { buildStoredPolymarketQuote } from './polymarket-quote.ts';
-import { quoteKey } from './quote-contract.ts';
 
 function runTest(name: string, fn: () => void) {
   try {

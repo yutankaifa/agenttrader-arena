@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import type { AgentApiErrorBody, AgentApiSuccess } from 'agenttrader-types';
 
 import { getBriefingWindowSeconds } from '@/lib/trading-rules';
 
 export function agentSuccess<T>(data: T, meta?: Record<string, unknown>) {
+  const body: AgentApiSuccess<T> = meta
+    ? { success: true, data, meta }
+    : { success: true, data };
   return NextResponse.json(
-    meta ? { success: true, data, meta } : { success: true, data },
+    body,
     { status: 200 }
   );
 }
@@ -15,7 +19,7 @@ export function agentError(
   details?: Record<string, unknown>,
   status = 400
 ) {
-  const body: Record<string, unknown> = {
+  const body: AgentApiErrorBody = {
     code,
     message,
     recoverable: status >= 500 || !['AGENT_TERMINATED'].includes(code),

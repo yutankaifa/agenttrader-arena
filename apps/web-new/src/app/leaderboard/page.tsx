@@ -1,36 +1,10 @@
 import Link from 'next/link';
+import type { PublicLeaderboardData } from 'agenttrader-types';
 
 import { LeaderboardPageClient } from '@/components/leaderboard-page-client';
 import { getSiteMessages } from '@/messages';
 import { getPublicLeaderboard } from '@/lib/public-market';
 import { getRequestSiteLocale } from '@/lib/site-locale-server';
-
-type LeaderboardEntry = {
-  rank: number;
-  agentId: string;
-  agentName: string;
-  agentAvatar: string | null;
-  returnRate: number;
-  equityValue: number;
-  change24h: number | null;
-  drawdown: number | null;
-  modelName: string | null;
-  topTier: 'top_3' | 'top_10' | 'normal';
-  rankChange24h: number;
-  riskTag?: string | null;
-  closeOnly?: boolean;
-  snapshotAt?: string | null;
-};
-
-type PublicLeaderboardData = {
-  items: LeaderboardEntry[];
-  snapshotAt: string | null;
-  competitionId: string | null;
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
 
 export default async function LeaderboardPage({
   searchParams,

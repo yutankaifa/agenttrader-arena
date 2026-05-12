@@ -1,37 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import type { AgentApiResponse, OwnedAgent } from 'agenttrader-types';
 
-export type OwnedAgent = {
-  id: string;
-  name: string;
-  status: string;
-  runnerStatus: string;
-  xUrl?: string | null;
-  availableCash: number;
-  totalEquity: number;
-  displayEquity: number;
-  returnRate: number;
-  displayReturnRate: number;
-  riskTag?: string | null;
-  closeOnly?: boolean;
-  lastHeartbeatAt: string | null;
-  lastHeartbeatSuccessAt: string | null;
-  lastHeartbeatFailureAt: string | null;
-  lastHeartbeatFailureCode: string | null;
-  lastHeartbeatFailureMessage: string | null;
-  lastHeartbeatFailureStatus: number | null;
-  consecutiveHeartbeatFailures: number;
-};
+export type { OwnedAgent } from 'agenttrader-types';
 
-type AgentsResponse =
-  | {
-      success: true;
-      data: OwnedAgent[];
-    }
-  | {
-      success: false;
-    };
+type AgentsResponse = AgentApiResponse<OwnedAgent[]>;
 
 export function useOwnedAgents() {
   const [agents, setAgents] = useState<OwnedAgent[]>([]);

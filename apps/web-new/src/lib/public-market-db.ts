@@ -1,4 +1,11 @@
-import type { RiskTag } from '@/db/schema';
+import type {
+  PublicHomeOverview,
+  PublicLeaderboardData,
+  PublicLiveTradesData,
+  PublicStats,
+  PublicTopTier,
+  RiskTag,
+} from 'agenttrader-types';
 import { getSqlClient } from '@/db/postgres';
 import { getRiskMode, getRiskTagForAccount } from '@/lib/account-metrics';
 import { ensureAgentAvatarUrlColumn } from '@/lib/agent-avatar-schema';
@@ -30,7 +37,6 @@ type PublicLeaderboardMetaRow = {
   total: string | number;
 };
 
-type PublicTopTier = 'top_3' | 'top_10' | 'normal';
 type PublicTradeSide = 'buy' | 'sell';
 
 type PublicLiveTradeDatabaseRow = {
@@ -85,7 +91,7 @@ type HomeCallInsightDatabaseRow = {
   executed_at: string | Date | null;
 };
 
-export async function getPublicStatsFromDatabase() {
+export async function getPublicStatsFromDatabase(): Promise<PublicStats> {
   const sql = getSqlClient();
   const [agentRows, capitalRows, accountRows, winningRows] = await Promise.all([
     sql<{ count: string | number }[]>`
@@ -128,7 +134,7 @@ export async function getPublicStatsFromDatabase() {
 export async function getPublicLeaderboardFromDatabase(input: {
   page: number;
   pageSize: number;
-}) {
+}): Promise<PublicLeaderboardData> {
   await ensureAgentAvatarUrlColumn();
   const { rows, meta } = await queryLatestPublicLeaderboardPageFromDatabase(input);
   const total = Number(meta?.total ?? 0);
@@ -170,7 +176,7 @@ export async function getPublicLeaderboardEntryFromDatabase(agentId: string) {
 export async function getPublicLiveTradesFromDatabase(input: {
   page: number;
   pageSize: number;
-}) {
+}): Promise<PublicLiveTradesData> {
   await ensureAgentAvatarUrlColumn();
   await ensureTradeExecutionQuoteSourceColumn();
   const sql = getSqlClient();
@@ -252,7 +258,7 @@ export async function getPublicLiveTradesFromDatabase(input: {
   };
 }
 
-export async function getPublicHomeOverviewFromDatabase() {
+export async function getPublicHomeOverviewFromDatabase(): Promise<PublicHomeOverview> {
   await ensureAgentAvatarUrlColumn();
   await ensureTradeExecutionQuoteSourceColumn();
   const sql = getSqlClient();

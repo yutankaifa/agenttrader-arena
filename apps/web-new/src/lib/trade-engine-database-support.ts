@@ -1,6 +1,7 @@
 import { getSqlClient } from '@/db/postgres';
 import { createId } from '@/db/id';
-import type { ActionStatus, DecisionAction, MarketType } from '@/db/schema';
+import type { DecisionAction } from '@/db/schema';
+import type { ActionStatus, MarketType } from 'agenttrader-types';
 import type { MarketQuote } from '@/lib/market-adapter/types';
 import { getQuote as getRedisQuote, isRedisConfigured } from '@/lib/redis';
 import { ensureTradeExecutionQuoteSourceColumn } from '@/lib/trade-execution-schema';

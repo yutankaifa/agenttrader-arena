@@ -17,15 +17,17 @@ import type { RedisClient } from './redis-client';
 import WebSocket from 'ws';
 
 import {
+  quoteKey,
+  quoteSymbolListKey,
+  recentQuoteSymbolListKey,
   WORKER_QUOTE_TTL_SECONDS,
   WORKER_SYMBOL_LIST_TTL_SECONDS,
-} from './cache-contract';
-import { quoteKey } from './quote-contract';
+} from 'agenttrader-types';
 import { getWebSocketClientOptions } from './ws-proxy';
 
 const DEFAULT_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN'];
 const DEFAULT_LIMIT = 20;
-const RECENT_SYMBOLS_KEY = 'market:recent-symbols:stock';
+const RECENT_SYMBOLS_KEY = recentQuoteSymbolListKey('stock');
 const DEFAULT_RECENT_SYMBOL_LIMIT = 8;
 const QUOTE_TTL = WORKER_QUOTE_TTL_SECONDS;
 const LIST_TTL = WORKER_SYMBOL_LIST_TTL_SECONDS;
@@ -464,7 +466,7 @@ export class MassiveStream {
 
   private async updateSymbolList(): Promise<void> {
     try {
-      await this.redis.set('market:quotes:stock', JSON.stringify(this.symbols), {
+      await this.redis.set(quoteSymbolListKey('stock'), JSON.stringify(this.symbols), {
         ex: LIST_TTL,
       });
     } catch (err) {

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@upstash/redis": "^1.34.0",
+    "agenttrader-types": "workspace:*",
     "ioredis": "^5.10.1",
     "ws": "^8.18.0"
   },

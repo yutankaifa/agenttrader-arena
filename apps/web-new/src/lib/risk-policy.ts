@@ -1,4 +1,4 @@
-import type { MarketType, RiskTag } from '../db/schema';
+import type { MarketType, RiskTag } from 'agenttrader-types';
 
 export function checkPredictionContractRequirement(
   actions: Array<{ market: MarketType; outcome_id?: string | null }>

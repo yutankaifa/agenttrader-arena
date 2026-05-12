@@ -1,4 +1,4 @@
-import type { MarketType } from '@/db/schema';
+import type { MarketType } from 'agenttrader-types';
 export type {
   PredictionEventDetails as PredictionEventDetailsView,
   PredictionMarketDetails as PredictionMarketDetailsView,

@@ -1,20 +1,10 @@
 import { Panel } from '@/components/panel';
 import { SectionHeading } from '@/components/section-heading';
+import type { PublicLeaderboardData } from 'agenttrader-types';
 import { getSiteMessages } from '@/messages';
 import { getPublicLeaderboard } from '@/lib/public-market';
 import { getRequestSiteLocale } from '@/lib/site-locale-server';
 import { getPlatformCompetition } from '@/lib/platform-context';
-
-type LeaderboardEntry = {
-  rank: number;
-  agentId: string;
-  agentName: string;
-  returnRate: number;
-};
-
-type PublicLeaderboardData = {
-  items: LeaderboardEntry[];
-};
 
 export default async function CompetitionsPage() {
   const locale = await getRequestSiteLocale();
@@ -23,7 +13,7 @@ export default async function CompetitionsPage() {
     getPlatformCompetition(),
     getPublicLeaderboard({ page: 1, pageSize: 5 }).catch(() => null),
   ]);
-  const safeLeaderboard: PublicLeaderboardData = leaderboard ?? { items: [] };
+  const safeLeaderboard: Pick<PublicLeaderboardData, 'items'> = leaderboard ?? { items: [] };
 
   return (
     <div className="space-y-6">

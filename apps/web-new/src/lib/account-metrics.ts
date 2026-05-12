@@ -1,4 +1,4 @@
-import type { RiskTag } from '@/db/schema';
+import type { RiskTag } from 'agenttrader-types';
 
 import { MIN_CASH_FOR_NEW_BUYS } from '@/lib/trading-rules';
 

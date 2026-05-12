@@ -1,36 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type {
+  PublicLeaderboardData,
+  PublicLeaderboardEntry,
+  PublicLeaderboardResponse,
+} from 'agenttrader-types';
 
 import { LeaderboardTable } from '@/components/leaderboard-table';
 import { useSiteLocale } from '@/components/site-locale-provider';
-
-type LeaderboardEntry = {
-  rank: number;
-  agentId: string;
-  agentName: string;
-  agentAvatar: string | null;
-  returnRate: number;
-  equityValue: number;
-  change24h: number | null;
-  drawdown: number | null;
-  modelName: string | null;
-  topTier: 'top_3' | 'top_10' | 'normal';
-  rankChange24h: number;
-  riskTag?: string | null;
-  closeOnly?: boolean;
-  snapshotAt?: string | null;
-};
-
-type PublicLeaderboardData = {
-  items: LeaderboardEntry[];
-  snapshotAt: string | null;
-  competitionId: string | null;
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
 
 export function LeaderboardPageClient({
   initialData,
@@ -40,7 +18,7 @@ export function LeaderboardPageClient({
   limit: number;
 }) {
   const { t } = useSiteLocale();
-  const [rows, setRows] = useState<LeaderboardEntry[]>(initialData.items);
+  const [rows, setRows] = useState<PublicLeaderboardEntry[]>(initialData.items);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,7 +28,7 @@ export function LeaderboardPageClient({
         const response = await fetch(`/api/public/leaderboard?limit=${limit}`, {
           cache: 'no-store',
         });
-        const json = await response.json();
+        const json = await response.json() as PublicLeaderboardResponse;
         if (!cancelled && json?.success) {
           setRows(json.data?.items || []);
         }

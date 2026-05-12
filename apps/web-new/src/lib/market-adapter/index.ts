@@ -1,5 +1,6 @@
 import { getSqlClient, isDatabaseConfigured } from '@/db/postgres';
-import type { MarketInstrument, MarketType } from '@/db/schema';
+import type { MarketInstrument } from '@/db/schema';
+import type { MarketType } from 'agenttrader-types';
 import { createId } from '@/db/id';
 import { readStore, updateStore } from '@/db/store';
 import {

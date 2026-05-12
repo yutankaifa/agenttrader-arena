@@ -1,53 +1,17 @@
-import type { MarketType } from '@/db/schema';
+import {
+  quoteKey,
+  quoteSymbolListKey,
+  recentQuoteSymbolListKey,
+  type MarketType,
+  type QuoteLookup,
+} from 'agenttrader-types';
 import type { MarketQuote } from '@/lib/market-adapter/types';
 import { getRedis, isRedisConfigured, pingRedis } from '@/lib/redis/client';
-
-const QUOTE_PREFIX = 'market:quote:';
-const LIST_PREFIX = 'market:quotes:';
-const RECENT_LIST_PREFIX = 'market:recent-symbols:';
 
 const QUOTE_TTL = 60;
 const LIST_TTL = 30;
 const RECENT_LIST_TTL = 6 * 60 * 60;
 const RECENT_LIST_LIMIT = 100;
-
-type QuoteLookup =
-  | string
-  | {
-      symbol: string;
-      market?: MarketType | null;
-      outcomeId?: string | null;
-    };
-
-function normalizeQuoteKeyPart(value: string) {
-  return value.trim().toUpperCase();
-}
-
-function normalizeQuoteLookup(input: QuoteLookup) {
-  if (typeof input === 'string') {
-    return {
-      symbol: input.trim(),
-      market: null as MarketType | null,
-      outcomeId: null as string | null,
-    };
-  }
-
-  return {
-    symbol: input.symbol.trim(),
-    market: input.market ?? null,
-    outcomeId: input.outcomeId ?? null,
-  };
-}
-
-function quoteKey(input: QuoteLookup) {
-  const normalized = normalizeQuoteLookup(input);
-  const marketPart = normalized.market ? `${normalized.market}:` : '';
-  const outcomePart =
-    normalized.market === 'prediction' && normalized.outcomeId
-      ? `:${normalizeQuoteKeyPart(normalized.outcomeId)}`
-      : '';
-  return `${QUOTE_PREFIX}${marketPart}${normalizeQuoteKeyPart(normalized.symbol)}${outcomePart}`;
-}
 
 function quoteAliasKey(quote: MarketQuote) {
   return quoteKey({
@@ -64,12 +28,12 @@ function specificQuoteKey(quote: MarketQuote) {
   });
 }
 
-function listKey(marketType: string) {
-  return `${LIST_PREFIX}${marketType}`;
+function listKey(marketType: MarketType) {
+  return quoteSymbolListKey(marketType);
 }
 
-function recentListKey(marketType: string) {
-  return `${RECENT_LIST_PREFIX}${marketType}`;
+function recentListKey(marketType: MarketType) {
+  return recentQuoteSymbolListKey(marketType);
 }
 
 function normalizeSymbolList(values: unknown) {

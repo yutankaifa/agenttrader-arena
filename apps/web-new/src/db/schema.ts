@@ -1,16 +1,24 @@
-export type MarketType = 'stock' | 'crypto' | 'prediction';
-export type AgentClaimStatus = 'unclaimed' | 'claimed';
-export type AgentStatus = 'registered' | 'active' | 'paused' | 'terminated';
-export type RunnerStatus = 'idle' | 'ready' | 'running' | 'error';
-export type RiskTag = null | 'high_risk' | 'close_only' | 'terminated';
-export type DecisionStatus = 'pending' | 'accepted' | 'rejected';
-export type ActionStatus =
-  | 'pending'
-  | 'filled'
-  | 'partial'
-  | 'cancelled'
-  | 'rejected';
-export type ClaimStatus = 'pending' | 'claimed' | 'expired';
+import type {
+  ActionStatus,
+  AgentClaimStatus,
+  AgentStatus,
+  ClaimStatus,
+  DecisionStatus,
+  MarketType,
+  RiskTag,
+  RunnerStatus,
+} from 'agenttrader-types';
+
+export type {
+  ActionStatus,
+  AgentClaimStatus,
+  AgentStatus,
+  ClaimStatus,
+  DecisionStatus,
+  MarketType,
+  RiskTag,
+  RunnerStatus,
+};
 
 export interface User {
   id: string;

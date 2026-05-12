@@ -3,9 +3,9 @@ import type {
   AgentTraderStore,
   Competition,
   MarketDataSnapshot,
-  MarketType,
   Position,
 } from '@/db/schema';
+import type { MarketType } from 'agenttrader-types';
 import { readStore } from '@/db/store';
 import { normalizeTimestampToIsoString } from '@/lib/timestamp';
 import { INITIAL_CAPITAL } from '@/lib/trading-rules';

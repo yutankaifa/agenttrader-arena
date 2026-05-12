@@ -2,6 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type {
+  OwnedAgentSummary,
+  OwnedAgentSummaryResponse,
+  OwnedPosition,
+  OwnedPositionsResponse,
+  OwnedTrade,
+  OwnedTradesResponse,
+  PublicAgentSummary,
+  PublicAgentSummaryResponse,
+  PublicEquityData,
+  PublicEquityResponse,
+  PublicPosition,
+  PublicPositionsResponse,
+  PublicSnapshotAudit,
+  PublicTrade,
+  PublicTradesResponse,
+  TradesMeta,
+} from 'agenttrader-types';
 
 import { EquityBars } from '@/components/equity-bars';
 import { Panel } from '@/components/panel';
@@ -16,184 +34,6 @@ import {
 import { US_MARKET_TIME_ZONE } from '@/lib/us-stock-market-core';
 
 type Range = '5m' | '15m' | '1h' | '4h' | '1d' | 'all';
-
-type PublicAgentSummary = {
-  agent: {
-    id: string;
-    name: string;
-    description: string | null;
-    avatarUrl: string | null;
-    xUrl?: string | null;
-    modelName: string | null;
-    primaryMarket: string | null;
-    marketPreferences: string[] | null;
-    status: string;
-    lastHeartbeatAt: string | null;
-    createdAt: string | null;
-  };
-  performance: {
-    rank: number | null;
-    topTier: string | null;
-    totalEquity: number;
-    displayEquity: number;
-    returnRate: number;
-    displayReturnRate: number;
-    drawdown: number | null;
-    snapshotAt: string | null;
-    riskTag?: string | null;
-    riskMode?: string | null;
-    closeOnly?: boolean;
-  };
-  positionsOverview: {
-    openPositions: number;
-    grossMarketValue: number;
-    unrealizedPnl: number;
-  };
-  dailySummary?: {
-    period: string;
-    timeZone: string;
-    summary: string;
-  };
-};
-
-type PublicPosition = {
-  id: string;
-  symbol: string;
-  market: string;
-  eventId?: string | null;
-  outcomeId?: string | null;
-  outcomeName?: string | null;
-  positionSize: number;
-  avgPrice: number | null;
-  marketPrice: number | null;
-  marketValue: number | null;
-  unrealizedPnl: number | null;
-};
-
-type PublicTrade = {
-  executionId: string;
-  symbol: string;
-  side: 'buy' | 'sell';
-  market: string;
-  eventId?: string | null;
-  outcomeId?: string | null;
-  outcomeName?: string | null;
-  reasonTag?: string | null;
-  displayRationale?: string | null;
-  filledUnits: number;
-  fillPrice: number;
-  executionPath?: string | null;
-  fee: number;
-  executedAt: string | null;
-};
-
-type PublicEquityData = {
-  series: Array<{
-    ts: string | null;
-    equity: number;
-    drawdown: number;
-    returnRate: number;
-  }>;
-  stats: {
-    currentEquity: number;
-    maxDrawdown: number;
-    totalReturn: number;
-    dataPoints: number;
-  };
-};
-
-type PublicSnapshotAudit = {
-  snapshot: {
-    id: string;
-    ts: string | null;
-    cash: number;
-    equity: number;
-    drawdown: number;
-    returnRate: number;
-  } | null;
-  positions: Array<{
-    id: string;
-    positionId?: string | null;
-    symbol: string;
-    market: string;
-    eventId?: string | null;
-    outcomeId?: string | null;
-    outcomeName?: string | null;
-    positionSize: number;
-    entryPrice: number | null;
-    marketPrice: number | null;
-    pricingSource: string | null;
-    marketValue: number | null;
-    unrealizedPnl: number | null;
-  }>;
-  coverage: 'position_prices' | 'aggregate_only' | 'none';
-};
-
-type OwnedAgentSummary = {
-  agent: {
-    id: string;
-    name: string;
-    description: string | null;
-    xUrl?: string | null;
-    modelProvider: string | null;
-    modelName: string | null;
-    runtimeEnvironment: string | null;
-    strategyHint: string | null;
-    status: string;
-    runnerStatus: string;
-    claimStatus: string;
-    lastHeartbeatAt: string | null;
-  };
-  account: {
-    initialCash: number;
-    availableCash: number;
-    totalEquity: number;
-    displayEquity: number;
-    returnRate: number;
-    displayReturnRate: number;
-    riskTag: string | null;
-  };
-  runtimeConfig: {
-    heartbeatIntervalMinutes: number;
-    lastHeartbeatAt: string | null;
-  };
-};
-
-type OwnedPosition = {
-  id: string;
-  symbol: string;
-  market: string;
-  eventId?: string | null;
-  outcomeId?: string | null;
-  outcomeName?: string | null;
-  positionSize: number;
-  entryPrice: number | null;
-  marketPrice: number | null;
-  unrealizedPnl: number | null;
-};
-
-type OwnedTrade = {
-  executionId: string;
-  actionId: string;
-  symbol: string;
-  objectId?: string | null;
-  side: 'buy' | 'sell';
-  market: string;
-  requestedUnits: number;
-  filledUnits: number;
-  fillPrice: number;
-  executionPath?: string | null;
-  slippage: number;
-  fee: number;
-  executedAt: string | null;
-};
-
-type TradesMeta = {
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
 
 type AgentViewMode = 'public' | 'owned';
 
@@ -262,8 +102,8 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         ]);
 
         const [summaryJson, positionsJson] = await Promise.all([
-          summaryRes.json(),
-          positionsRes.json(),
+          summaryRes.json() as Promise<PublicAgentSummaryResponse>,
+          positionsRes.json() as Promise<PublicPositionsResponse>,
         ]);
 
         if (cancelled) return;
@@ -282,8 +122,8 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         ]);
 
         const [ownedSummaryJson, ownedPositionsJson] = await Promise.all([
-          ownedSummaryRes.json(),
-          ownedPositionsRes.json(),
+          ownedSummaryRes.json() as Promise<OwnedAgentSummaryResponse>,
+          ownedPositionsRes.json() as Promise<OwnedPositionsResponse>,
         ]);
 
         if (cancelled) return;
@@ -294,10 +134,10 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
           return;
         }
 
-        const ownedSummary = ownedSummaryJson.data as OwnedAgentSummary;
-        const ownedPositions = (ownedPositionsJson?.success
+        const ownedSummary = ownedSummaryJson.data;
+        const ownedPositions = ownedPositionsJson?.success
           ? ownedPositionsJson.data || []
-          : []) as OwnedPosition[];
+          : [];
         const mappedOwnedPositions = ownedPositions.map(mapOwnedPositionToPublic);
 
         setViewMode('owned');
@@ -337,25 +177,32 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         const response = await fetch(`${routeBase}?page=${tradePage}&pageSize=10`, {
           cache: viewMode === 'public' ? 'default' : 'no-store',
         });
-        const tradesJson = await response.json();
 
         if (cancelled) return;
 
+        let nextMeta: TradesMeta = {
+          total: 0,
+          page: tradePage,
+          pageSize: 10,
+          totalPages: 0,
+        };
+
         if (viewMode === 'public') {
+          const tradesJson = await response.json() as PublicTradesResponse;
           setTrades(tradesJson?.success ? tradesJson.data || [] : []);
+          if (tradesJson.success && tradesJson.meta) {
+            nextMeta = tradesJson.meta;
+          }
         } else {
-          const ownedTrades = (tradesJson?.success ? tradesJson.data || [] : []) as OwnedTrade[];
+          const tradesJson = await response.json() as OwnedTradesResponse;
+          const ownedTrades = tradesJson?.success ? tradesJson.data || [] : [];
           setTrades(ownedTrades.map(mapOwnedTradeToPublic));
+          if (tradesJson.success && tradesJson.meta) {
+            nextMeta = tradesJson.meta;
+          }
         }
 
-        setTradesMeta(
-          tradesJson?.meta ?? {
-            total: 0,
-            page: tradePage,
-            pageSize: 10,
-            totalPages: 0,
-          }
-        );
+        setTradesMeta(nextMeta);
       } catch {
         if (!cancelled) {
           setTrades([]);
@@ -430,7 +277,7 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         const response = await fetch(`${routeBase}?range=${range}`, {
           cache: viewMode === 'public' ? 'default' : 'no-store',
         });
-        const equityJson = await response.json();
+        const equityJson = await response.json() as PublicEquityResponse;
 
         if (cancelled) return;
 
@@ -505,7 +352,7 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
       const firstResponse = await fetch(`${tradeRouteBase}?page=1&pageSize=50`, {
         cache: 'no-store',
       });
-      const firstJson = await firstResponse.json();
+      const firstJson = await firstResponse.json() as PublicTradesResponse;
       if (!firstJson?.success) {
         throw new Error('failed');
       }
@@ -516,7 +363,7 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         const response = await fetch(`${tradeRouteBase}?page=${page}&pageSize=50`, {
           cache: 'no-store',
         });
-        const json = await response.json();
+        const json = await response.json() as PublicTradesResponse;
         if (json?.success && Array.isArray(json.data)) {
           allTrades.push(...json.data);
         }

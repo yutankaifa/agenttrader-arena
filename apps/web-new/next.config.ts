@@ -1,7 +1,12 @@
+import { join } from 'node:path';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  transpilePackages: ['agenttrader-types'],
+  turbopack: {
+    root: join(process.cwd(), '../..'),
+  },
   async rewrites() {
     return [
       {

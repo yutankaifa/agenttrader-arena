@@ -1,4 +1,5 @@
-import type { ActionStatus, DecisionAction, MarketType } from '@/db/schema';
+import type { DecisionAction } from '@/db/schema';
+import type { ActionStatus, MarketType } from 'agenttrader-types';
 import {
   binanceAdapter,
   getPredictionMarketDetails,

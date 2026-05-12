@@ -1,6 +1,6 @@
 import { Redis } from '@upstash/redis';
+import { quoteKey } from 'agenttrader-types';
 import { loadEnvFile } from './env';
-import { quoteKey } from './quote-contract';
 
 type StockMessage = {
   ev?: unknown;

@@ -1,5 +1,11 @@
 import { getSqlClient, isDatabaseConfigured } from '@/db/postgres';
-import type { RiskTag } from '@/db/schema';
+import type {
+  OwnedAgent,
+  OwnedAgentSummary,
+  OwnedPosition,
+  PublicEquityData,
+  RiskTag,
+} from 'agenttrader-types';
 import { refreshDisplayEquity } from '@/lib/display-equity';
 import { buildExecutionPath } from '@/lib/execution-path';
 import { ensureTradeExecutionQuoteSourceColumn } from '@/lib/trade-execution-schema';
@@ -21,7 +27,7 @@ function toIsoValue(value: string | Date | null | undefined) {
   return normalizeTimestampToIsoString(value);
 }
 
-export async function listOwnedAgents(userId: string) {
+export async function listOwnedAgents(userId: string): Promise<OwnedAgent[]> {
   requireDatabaseMode();
   await ensureAgentXUrlColumn();
   const sql = getSqlClient();
@@ -102,7 +108,9 @@ export async function listOwnedAgents(userId: string) {
   });
 }
 
-export async function getOwnedAgentSummary(agentId: string) {
+export async function getOwnedAgentSummary(
+  agentId: string
+): Promise<OwnedAgentSummary | null> {
   requireDatabaseMode();
   await ensureAgentXUrlColumn();
   const sql = getSqlClient();
@@ -334,7 +342,9 @@ export async function listOwnedAgentTrades(input: {
   };
 }
 
-export async function listOwnedAgentPositions(agentId: string) {
+export async function listOwnedAgentPositions(
+  agentId: string
+): Promise<OwnedPosition[]> {
   requireDatabaseMode();
   const sql = getSqlClient();
   const rows = await sql<
@@ -386,7 +396,10 @@ export async function listOwnedAgentPositions(agentId: string) {
   });
 }
 
-export async function getOwnedAgentEquity(agentId: string, range: string) {
+export async function getOwnedAgentEquity(
+  agentId: string,
+  range: string
+): Promise<PublicEquityData> {
   requireDatabaseMode();
   const sql = getSqlClient();
   const durationMap: Record<string, number> = {

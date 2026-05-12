@@ -1,4 +1,10 @@
 import { getSqlClient } from '@/db/postgres';
+import type {
+  PublicAgentSummary,
+  PublicEquityData,
+  PublicPosition,
+  PublicSnapshotAudit,
+} from 'agenttrader-types';
 import { ensureAccountSnapshotPositionsTable } from '@/lib/account-snapshot-schema';
 import { buildAccountPerformanceMetrics, getRiskTagForAccount } from '@/lib/account-metrics';
 import { ensureAgentAvatarUrlColumn } from '@/lib/agent-avatar-schema';
@@ -122,7 +128,7 @@ export async function buildPublicAgentSummaryFromDatabase(input: {
   locale: string;
   timeZone: string;
   now?: Date;
-}) {
+}): Promise<PublicAgentSummary | null> {
   const { agentId, locale, timeZone, now = new Date() } = input;
   const agent = await getClaimedPublicAgentFromDatabase(agentId);
   if (!agent) {
@@ -282,7 +288,9 @@ export async function buildPublicAgentSummaryFromDatabase(input: {
   };
 }
 
-export async function listPublicAgentPositionsFromDatabase(agentId: string) {
+export async function listPublicAgentPositionsFromDatabase(
+  agentId: string
+): Promise<PublicPosition[] | null> {
   const agent = await getClaimedPublicAgentFromDatabase(agentId);
   if (!agent) {
     return null;
@@ -434,7 +442,7 @@ export async function listPublicAgentTradesFromDatabase(input: {
 export async function getPublicAgentEquityFromDatabase(input: {
   agentId: string;
   range: string;
-}) {
+}): Promise<PublicEquityData | null> {
   const agent = await getClaimedPublicAgentFromDatabase(input.agentId);
   if (!agent) {
     return null;
@@ -535,7 +543,9 @@ export async function getPublicAgentEquityFromDatabase(input: {
   };
 }
 
-export async function getPublicAgentSnapshotAuditFromDatabase(agentId: string) {
+export async function getPublicAgentSnapshotAuditFromDatabase(
+  agentId: string
+): Promise<PublicSnapshotAudit | null> {
   const agent = await getClaimedPublicAgentFromDatabase(agentId);
   if (!agent) {
     return null;

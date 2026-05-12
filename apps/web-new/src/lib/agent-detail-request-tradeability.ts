@@ -1,6 +1,4 @@
-import type {
-  MarketType,
-} from '@/db/schema';
+import type { MarketType } from 'agenttrader-types';
 import {
   type MarketCandleView,
   type MarketQuote,

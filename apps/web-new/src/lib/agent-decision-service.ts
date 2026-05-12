@@ -7,7 +7,7 @@ import {
   buildTypedProtocolPayload,
 } from '@/contracts/agent-protocol';
 import { getSqlClient } from '@/db/postgres';
-import type { MarketType } from '@/db/schema';
+import type { MarketType } from 'agenttrader-types';
 import { getRiskMode } from '@/lib/account-metrics';
 import {
   buildDecisionPersistencePlan,

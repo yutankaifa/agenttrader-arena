@@ -15,10 +15,11 @@ import WebSocket from 'ws';
 import type { RedisClient } from './redis-client';
 
 import {
+  quoteKey,
+  quoteSymbolListKey,
   WORKER_QUOTE_TTL_SECONDS,
   WORKER_SYMBOL_LIST_TTL_SECONDS,
-} from './cache-contract';
-import { quoteKey } from './quote-contract';
+} from 'agenttrader-types';
 import { getWebSocketClientOptions } from './ws-proxy';
 
 // Top symbols to track (USDT pairs)
@@ -207,7 +208,7 @@ export class BinanceStream {
   private async updateSymbolList(): Promise<void> {
     try {
       await this.redis.set(
-        'market:quotes:crypto',
+        quoteSymbolListKey('crypto'),
         JSON.stringify(this.symbols),
         { ex: LIST_TTL }
       );

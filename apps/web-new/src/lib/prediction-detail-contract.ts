@@ -1,4 +1,4 @@
-import type { MarketType } from '../db/schema';
+import type { MarketType } from 'agenttrader-types';
 
 function serializeUnknown(value: unknown) {
   if (value == null) {

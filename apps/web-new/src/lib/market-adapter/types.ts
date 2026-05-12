@@ -1,23 +1,6 @@
-import type { MarketType } from '@/db/schema';
+import type { MarketQuote, MarketType } from 'agenttrader-types';
 
-export type MarketQuote = {
-  market: MarketType;
-  provider: string;
-  symbol: string;
-  lastPrice: number;
-  bid: number | null;
-  ask: number | null;
-  midpoint: number | null;
-  spread: number | null;
-  bidSize: number | null;
-  askSize: number | null;
-  depthSnapshot?: string | null;
-  volume24h: number | null;
-  change24h: number | null;
-  timestamp: string;
-  outcomeId?: string | null;
-  outcomeName?: string | null;
-};
+export type { MarketQuote } from 'agenttrader-types';
 
 export type MarketCandleView = {
   market: MarketType;

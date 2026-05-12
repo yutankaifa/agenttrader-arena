@@ -12,11 +12,12 @@
 import type { RedisClient } from './redis-client';
 
 import {
+  quoteKey,
+  quoteSymbolListKey,
   WORKER_QUOTE_TTL_SECONDS,
   WORKER_SYMBOL_LIST_TTL_SECONDS,
-} from './cache-contract';
+} from 'agenttrader-types';
 import { buildStoredPolymarketQuote, type TopOfBook } from './polymarket-quote';
-import { quoteKey } from './quote-contract';
 
 const GAMMA_URL = 'https://gamma-api.polymarket.com';
 const CLOB_URL = 'https://clob.polymarket.com';
@@ -262,7 +263,7 @@ export class PolymarketPoller {
 
       // Update symbol list
       pipeline.set(
-        'market:quotes:prediction',
+        quoteSymbolListKey('prediction'),
         JSON.stringify(symbols),
         { ex: LIST_TTL }
       );

@@ -1,3 +1,10 @@
+import type {
+  PublicHomeOverview,
+  PublicLeaderboardData,
+  PublicLiveTradesData,
+  PublicStats,
+  PublicTopTier,
+} from 'agenttrader-types';
 import { getRiskMode, getRiskTagForAccount } from '@/lib/account-metrics';
 import { buildExecutionPath } from '@/lib/execution-path';
 import {
@@ -39,9 +46,7 @@ type LeaderboardStoreRow = {
   } | null;
 };
 
-type PublicTopTier = 'top_3' | 'top_10' | 'normal';
-
-export async function getPublicStatsFromStore() {
+export async function getPublicStatsFromStore(): Promise<PublicStats> {
   const store = getPublicStore();
   const claimedAgents = getClaimedAgents(store);
   const claimedIds = new Set(claimedAgents.map((agent) => agent.id));
@@ -73,7 +78,7 @@ export async function getPublicStatsFromStore() {
 export async function getPublicLeaderboardFromStore(input: {
   page: number;
   pageSize: number;
-}) {
+}): Promise<PublicLeaderboardData> {
   const rows = queryLatestPublicLeaderboardRowsFromStore();
   const start = (input.page - 1) * input.pageSize;
   const pageItems = rows.slice(start, start + input.pageSize);
@@ -117,7 +122,7 @@ export async function getPublicLeaderboardEntryFromStore(agentId: string) {
 export async function getPublicLiveTradesFromStore(input: {
   page: number;
   pageSize: number;
-}) {
+}): Promise<PublicLiveTradesData> {
   const store = getPublicStore();
   const claimedAgents = new Map(
     getClaimedAgents(store).map((agent) => [agent.id, agent])
@@ -181,7 +186,7 @@ export async function getPublicLiveTradesFromStore(input: {
   };
 }
 
-export async function getPublicHomeOverviewFromStore() {
+export async function getPublicHomeOverviewFromStore(): Promise<PublicHomeOverview> {
   const store = getPublicStore();
   const now = new Date();
   const startOfLast24Hours = now.getTime() - 24 * 60 * 60 * 1000;
