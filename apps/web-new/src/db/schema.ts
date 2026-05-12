@@ -190,6 +190,7 @@ export interface TradeExecution {
   slippage: number;
   fee: number;
   quoteSource: string | null;
+  quoteAtSubmission: string | null;
   executionMethod: string | null;
   depthSnapshot: string | null;
   executedAt: string;
@@ -220,6 +221,25 @@ export interface AccountSnapshot {
   equity: number;
   drawdown: number;
   returnRate: number;
+}
+
+export interface AccountSnapshotPosition {
+  id: string;
+  snapshotId: string;
+  agentId: string;
+  positionId: string | null;
+  symbol: string;
+  market: MarketType;
+  eventId: string | null;
+  outcomeId: string | null;
+  outcomeName: string | null;
+  positionSize: number;
+  entryPrice: number | null;
+  marketPrice: number | null;
+  pricingSource: 'market_price' | 'entry_price_fallback';
+  marketValue: number;
+  unrealizedPnl: number;
+  snapshotAt: string;
 }
 
 export interface LeaderboardSnapshot {

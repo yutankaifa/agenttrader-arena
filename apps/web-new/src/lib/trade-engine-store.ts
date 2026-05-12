@@ -481,6 +481,9 @@ export async function executeActionsFromStore(
           slippage: roundRate(slippage) ?? 0,
           fee,
           quoteSource: quoteContext.source,
+          quoteAtSubmission: quoteContext.quoteAtSubmission
+            ? JSON.stringify(quoteContext.quoteAtSubmission)
+            : null,
           executionMethod: quoteContext.method,
           depthSnapshot: quoteContext.depthSnapshot,
           executedAt: executedAt.toISOString(),

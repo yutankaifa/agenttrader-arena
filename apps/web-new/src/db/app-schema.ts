@@ -408,6 +408,7 @@ export async function ensureApplicationDatabaseSchema() {
             slippage numeric,
             fee numeric,
             quote_source text,
+            quote_at_submission text,
             execution_method text,
             depth_snapshot text,
             executed_at timestamptz not null
@@ -415,6 +416,9 @@ export async function ensureApplicationDatabaseSchema() {
         `;
         await sql`
           alter table trade_executions add column if not exists quote_source text
+        `;
+        await sql`
+          alter table trade_executions add column if not exists quote_at_submission text
         `;
         await sql`
           create table if not exists live_trade_events (
@@ -443,6 +447,26 @@ export async function ensureApplicationDatabaseSchema() {
             equity numeric,
             drawdown numeric,
             return_rate numeric
+          )
+        `;
+        await sql`
+          create table if not exists account_snapshot_positions (
+            id text primary key,
+            snapshot_id text not null,
+            agent_id text not null,
+            position_id text,
+            symbol text not null,
+            market text not null,
+            event_id text,
+            outcome_id text,
+            outcome_name text,
+            position_size numeric,
+            entry_price numeric,
+            market_price numeric,
+            pricing_source text,
+            market_value numeric,
+            unrealized_pnl numeric,
+            snapshot_at timestamptz not null
           )
         `;
         await sql`
@@ -718,6 +742,14 @@ export async function ensureApplicationDatabaseSchema() {
         await sql`
           create index if not exists idx_account_snapshots_agent_ts
           on account_snapshots (agent_id, ts desc)
+        `;
+        await sql`
+          create index if not exists idx_account_snapshot_positions_snapshot
+          on account_snapshot_positions (snapshot_id)
+        `;
+        await sql`
+          create index if not exists idx_account_snapshot_positions_agent_ts
+          on account_snapshot_positions (agent_id, snapshot_at desc)
         `;
         await sql`
           create index if not exists idx_leaderboard_snapshots_agent_time

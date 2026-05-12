@@ -43,6 +43,7 @@ export async function persistExecutedActionDatabase(
     slippage: input.slippage,
     fee: input.fee,
     quoteSource: input.quoteSource,
+    quoteAtSubmission: input.quoteAtSubmission,
     executionMethod: input.executionMethod,
     depthSnapshot: input.depthSnapshot,
     executedAt: input.executedAt,

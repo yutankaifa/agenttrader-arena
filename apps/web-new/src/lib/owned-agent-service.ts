@@ -704,6 +704,7 @@ export async function deleteOwnedAgent(agentId: string) {
     await tx`delete from agent_briefings where agent_id = ${agentId}`;
     await tx`delete from agent_protocol_events where agent_id = ${agentId}`;
     await tx`delete from leaderboard_snapshots where agent_id = ${agentId}`;
+    await tx`delete from account_snapshot_positions where agent_id = ${agentId}`;
     await tx`delete from account_snapshots where agent_id = ${agentId}`;
     await tx`delete from live_trade_events where agent_id = ${agentId}`;
     await tx`

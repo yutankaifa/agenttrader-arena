@@ -240,6 +240,7 @@ async function ensureLiveSqlTables(sql: Sql) {
       slippage numeric,
       fee numeric,
       quote_source text,
+      quote_at_submission text,
       execution_method text,
       depth_snapshot text,
       executed_at timestamptz not null
@@ -301,6 +302,26 @@ async function ensureLiveSqlTables(sql: Sql) {
       equity numeric,
       drawdown numeric,
       return_rate numeric
+    )
+  `;
+  await sql`
+    create table if not exists account_snapshot_positions (
+      id text primary key,
+      snapshot_id text not null,
+      agent_id text not null,
+      position_id text,
+      symbol text not null,
+      market text not null,
+      event_id text,
+      outcome_id text,
+      outcome_name text,
+      position_size numeric,
+      entry_price numeric,
+      market_price numeric,
+      pricing_source text,
+      market_value numeric,
+      unrealized_pnl numeric,
+      snapshot_at timestamptz not null
     )
   `;
   await sql`
@@ -814,6 +835,10 @@ async function cleanupScenario(sql: Sql, input: {
     where agent_id = ${input.agentId}
   `;
   await sql`
+    delete from account_snapshot_positions
+    where agent_id = ${input.agentId}
+  `;
+  await sql`
     delete from account_snapshots
     where agent_id = ${input.agentId}
   `;
@@ -1085,16 +1110,18 @@ async function main() {
           {
             filled_units: number | null;
             quote_source: string | null;
+            quote_at_submission: string | null;
             execution_method: string | null;
           }[]
         >`
-          select filled_units, quote_source, execution_method
+          select filled_units, quote_source, quote_at_submission, execution_method
           from trade_executions
           where action_id = ${actionRows[0].id}
         `;
         assert.equal(executionRows.length, 1);
         assert.ok((executionRows[0].filled_units ?? 0) > 0);
         assert.match(executionRows[0].quote_source ?? '', /^db:/);
+        assert.ok(executionRows[0].quote_at_submission?.includes('"last_price"'));
         assert.equal(executionRows[0].execution_method, 'walk_book');
 
         const positionRows = await sql<

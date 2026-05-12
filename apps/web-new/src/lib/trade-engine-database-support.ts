@@ -9,6 +9,7 @@ import {
   type ExecutionMarketQuoteLike,
   resolveExecutionQuote,
   type ExecutionQuote,
+  type QuoteAtSubmission,
   type ExecutionSnapshotLike,
 } from './execution-quote-resolver';
 import {
@@ -58,6 +59,7 @@ type TradeExecutionWriteInput = {
   slippage: number;
   fee: number;
   quoteSource: string | null;
+  quoteAtSubmission: QuoteAtSubmission | null;
   executionMethod: string | null;
   depthSnapshot: string | null;
   executedAt: Date;
@@ -341,6 +343,7 @@ export async function writeTradeExecutionDatabase(input: TradeExecutionWriteInpu
       slippage,
       fee,
       quote_source,
+      quote_at_submission,
       execution_method,
       depth_snapshot,
       executed_at
@@ -353,11 +356,16 @@ export async function writeTradeExecutionDatabase(input: TradeExecutionWriteInpu
       ${roundRate(input.slippage) ?? 0},
       ${roundUsd(input.fee)},
       ${input.quoteSource},
+      ${serializeQuoteAtSubmission(input.quoteAtSubmission)},
       ${input.executionMethod},
       ${input.depthSnapshot},
       ${input.executedAt.toISOString()}
     )
   `;
+}
+
+function serializeQuoteAtSubmission(quoteAtSubmission: QuoteAtSubmission | null) {
+  return quoteAtSubmission ? JSON.stringify(quoteAtSubmission) : null;
 }
 
 export async function rejectActionDatabase(actionId: string, reason: string) {
