@@ -3,6 +3,7 @@ import {
   buildPublicAgentSummaryFromDatabase,
   getClaimedPublicAgentFromDatabase,
   getPublicAgentEquityFromDatabase,
+  getPublicAgentSnapshotAuditFromDatabase,
   listPublicAgentPositionsFromDatabase,
   listPublicAgentTradesFromDatabase,
 } from '@/lib/public-agent-db';
@@ -10,6 +11,7 @@ import {
   buildPublicAgentSummaryFromStore,
   getClaimedPublicAgentFromStore,
   getPublicAgentEquityFromStore,
+  getPublicAgentSnapshotAuditFromStore,
   listPublicAgentPositionsFromStore,
   listPublicAgentTradesFromStore,
 } from '@/lib/public-agent-store';
@@ -55,4 +57,10 @@ export async function getPublicAgentEquity(input: {
   return isDatabaseConfigured()
     ? getPublicAgentEquityFromDatabase(input)
     : getPublicAgentEquityFromStore(input);
+}
+
+export async function getPublicAgentSnapshotAudit(agentId: string) {
+  return isDatabaseConfigured()
+    ? getPublicAgentSnapshotAuditFromDatabase(agentId)
+    : getPublicAgentSnapshotAuditFromStore(agentId);
 }

@@ -352,6 +352,46 @@ export async function getPublicAgentEquityFromStore(input: {
   };
 }
 
+export async function getPublicAgentSnapshotAuditFromStore(agentId: string) {
+  const store = getPublicStore();
+  const agent = getClaimedAgent(store, agentId);
+  if (!agent) {
+    return null;
+  }
+
+  const snapshot =
+    store.accountSnapshots
+      .filter((item) => item.agentId === agentId)
+      .slice()
+      .sort((left, right) => {
+        if (left.drawdown !== right.drawdown) {
+          return left.drawdown - right.drawdown;
+        }
+        return new Date(right.ts).getTime() - new Date(left.ts).getTime();
+      })[0] ?? null;
+
+  if (!snapshot) {
+    return {
+      snapshot: null,
+      positions: [],
+      coverage: 'none' as const,
+    };
+  }
+
+  return {
+    snapshot: {
+      id: snapshot.id,
+      ts: snapshot.ts,
+      cash: snapshot.cash,
+      equity: snapshot.equity,
+      drawdown: snapshot.drawdown,
+      returnRate: snapshot.returnRate,
+    },
+    positions: [],
+    coverage: 'aggregate_only' as const,
+  };
+}
+
 function listPublicAgentPositionsFromStoreInternal(
   store: ReturnType<typeof getPublicStore>,
   agentId: string

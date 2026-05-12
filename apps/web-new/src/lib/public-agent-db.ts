@@ -1,4 +1,5 @@
 import { getSqlClient } from '@/db/postgres';
+import { ensureAccountSnapshotPositionsTable } from '@/lib/account-snapshot-schema';
 import { buildAccountPerformanceMetrics, getRiskTagForAccount } from '@/lib/account-metrics';
 import { ensureAgentAvatarUrlColumn } from '@/lib/agent-avatar-schema';
 import { ensureAgentXUrlColumn } from '@/lib/agent-x';
@@ -531,6 +532,128 @@ export async function getPublicAgentEquityFromDatabase(input: {
       totalReturn: liveReturn,
       dataPoints: series.length,
     },
+  };
+}
+
+export async function getPublicAgentSnapshotAuditFromDatabase(agentId: string) {
+  const agent = await getClaimedPublicAgentFromDatabase(agentId);
+  if (!agent) {
+    return null;
+  }
+
+  await ensureAccountSnapshotPositionsTable();
+
+  const sql = getSqlClient();
+  const auditedSnapshotRows = await sql<
+    {
+      id: string;
+      ts: string | Date | null;
+      cash: number | null;
+      equity: number | null;
+      drawdown: number | null;
+      return_rate: number | null;
+    }[]
+  >`
+    select s.id, s.ts, s.cash, s.equity, s.drawdown, s.return_rate
+    from account_snapshots s
+    where s.agent_id = ${agentId}
+      and exists (
+        select 1
+        from account_snapshot_positions asp
+        where asp.snapshot_id = s.id
+      )
+    order by s.drawdown asc nulls last, s.ts desc
+    limit 1
+  `;
+  const aggregateSnapshotRows = auditedSnapshotRows.length
+    ? []
+    : await sql<
+        {
+          id: string;
+          ts: string | Date | null;
+          cash: number | null;
+          equity: number | null;
+          drawdown: number | null;
+          return_rate: number | null;
+        }[]
+      >`
+        select id, ts, cash, equity, drawdown, return_rate
+        from account_snapshots
+        where agent_id = ${agentId}
+        order by drawdown asc nulls last, ts desc
+        limit 1
+      `;
+  const snapshot = auditedSnapshotRows[0] ?? aggregateSnapshotRows[0] ?? null;
+  if (!snapshot) {
+    return {
+      snapshot: null,
+      positions: [],
+      coverage: 'none' as const,
+    };
+  }
+
+  const positionRows = await sql<
+    {
+      id: string;
+      position_id: string | null;
+      symbol: string;
+      market: string;
+      event_id: string | null;
+      outcome_id: string | null;
+      outcome_name: string | null;
+      position_size: number | null;
+      entry_price: number | null;
+      market_price: number | null;
+      pricing_source: string | null;
+      market_value: number | null;
+      unrealized_pnl: number | null;
+    }[]
+  >`
+    select
+      id,
+      position_id,
+      symbol,
+      market,
+      event_id,
+      outcome_id,
+      outcome_name,
+      position_size,
+      entry_price,
+      market_price,
+      pricing_source,
+      market_value,
+      unrealized_pnl
+    from account_snapshot_positions
+    where snapshot_id = ${snapshot.id}
+    order by abs(coalesce(market_value, 0)) desc
+    limit 8
+  `;
+
+  return {
+    snapshot: {
+      id: snapshot.id,
+      ts: toIsoString(snapshot.ts),
+      cash: snapshot.cash ?? 0,
+      equity: snapshot.equity ?? 0,
+      drawdown: snapshot.drawdown ?? 0,
+      returnRate: snapshot.return_rate ?? 0,
+    },
+    positions: positionRows.map((row) => ({
+      id: row.id,
+      positionId: row.position_id,
+      symbol: row.symbol,
+      market: row.market,
+      eventId: row.event_id,
+      outcomeId: row.outcome_id,
+      outcomeName: row.outcome_name,
+      positionSize: row.position_size ?? 0,
+      entryPrice: row.entry_price,
+      marketPrice: row.market_price,
+      pricingSource: row.pricing_source,
+      marketValue: row.market_value,
+      unrealizedPnl: row.unrealized_pnl,
+    })),
+    coverage: positionRows.length ? ('position_prices' as const) : ('aggregate_only' as const),
   };
 }
 

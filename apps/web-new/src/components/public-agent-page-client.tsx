@@ -102,6 +102,33 @@ type PublicEquityData = {
   };
 };
 
+type PublicSnapshotAudit = {
+  snapshot: {
+    id: string;
+    ts: string | null;
+    cash: number;
+    equity: number;
+    drawdown: number;
+    returnRate: number;
+  } | null;
+  positions: Array<{
+    id: string;
+    positionId?: string | null;
+    symbol: string;
+    market: string;
+    eventId?: string | null;
+    outcomeId?: string | null;
+    outcomeName?: string | null;
+    positionSize: number;
+    entryPrice: number | null;
+    marketPrice: number | null;
+    pricingSource: string | null;
+    marketValue: number | null;
+    unrealizedPnl: number | null;
+  }>;
+  coverage: 'position_prices' | 'aggregate_only' | 'none';
+};
+
 type OwnedAgentSummary = {
   agent: {
     id: string;
@@ -187,12 +214,14 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
   const [viewMode, setViewMode] = useState<AgentViewMode | null>(null);
   const [tradeRouteBase, setTradeRouteBase] = useState<string | null>(null);
   const [equity, setEquity] = useState<PublicEquityData | null>(null);
+  const [snapshotAudit, setSnapshotAudit] = useState<PublicSnapshotAudit | null>(null);
   const [range, setRange] = useState<Range>('1d');
   const [tradePage, setTradePage] = useState(1);
   const [downloadingTrades, setDownloadingTrades] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [tradesLoading, setTradesLoading] = useState(true);
   const [equityLoading, setEquityLoading] = useState(true);
+  const [snapshotAuditLoading, setSnapshotAuditLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const locale = localeTag;
 
@@ -210,6 +239,7 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
       setPositions([]);
       setTrades([]);
       setEquity(null);
+      setSnapshotAudit(null);
       setViewMode(null);
       setTradeRouteBase(null);
       setTradesMeta({
@@ -348,6 +378,42 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
       cancelled = true;
     };
   }, [agentId, tradePage, viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== 'public') {
+      setSnapshotAudit(null);
+      setSnapshotAuditLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSnapshotAuditLoading(true);
+
+    async function loadSnapshotAudit() {
+      try {
+        const response = await fetch(`/api/public/agents/${agentId}/snapshot-audit`, {
+          cache: 'default',
+        });
+        const auditJson = await response.json();
+
+        if (cancelled) return;
+        setSnapshotAudit(auditJson?.success ? auditJson.data || null : null);
+      } catch {
+        if (!cancelled) {
+          setSnapshotAudit(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setSnapshotAuditLoading(false);
+        }
+      }
+    }
+
+    void loadSnapshotAudit();
+    return () => {
+      cancelled = true;
+    };
+  }, [agentId, viewMode]);
 
   useEffect(() => {
     if (!viewMode) {
@@ -667,6 +733,13 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
             <span>{t((m) => m.publicAgent.maxDrawdown)} {formatPercent(safeEquity.stats.maxDrawdown, locale)}</span>
             <span>{t((m) => m.publicAgent.total)} {formatPercent(safeEquity.stats.totalReturn, locale)}</span>
           </div>
+
+          <SnapshotAuditCard
+            audit={snapshotAudit}
+            isLoading={snapshotAuditLoading}
+            locale={locale}
+            t={t}
+          />
         </Panel>
 
         <div className="space-y-6">
@@ -967,6 +1040,153 @@ function StatusBadge({
   );
 }
 
+function SnapshotAuditCard({
+  audit,
+  isLoading,
+  locale,
+  t,
+}: {
+  audit: PublicSnapshotAudit | null;
+  isLoading: boolean;
+  locale: string;
+  t: ReturnType<typeof useSiteLocale>['t'];
+}) {
+  if (isLoading) {
+    return (
+      <div className="mt-5 h-32 animate-pulse rounded-xl border border-black/10 bg-[#faf8f3]" />
+    );
+  }
+
+  if (!audit?.snapshot) {
+    return (
+      <div className="mt-5 rounded-xl border border-black/10 bg-[#fafafa] p-4 text-sm text-black/56">
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-black/42">
+          {t((m) => m.publicAgent.snapshotAudit)}
+        </p>
+        <p className="mt-2">{t((m) => m.publicAgent.snapshotAuditEmpty)}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 rounded-xl border border-black/10 bg-[#fafafa] p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-black/42">
+            {t((m) => m.publicAgent.snapshotAudit)}
+          </p>
+          <p className="mt-2 text-sm leading-6 text-black/58">
+            {audit.coverage === 'position_prices'
+              ? t((m) => m.publicAgent.snapshotAuditDescription)
+              : t((m) => m.publicAgent.snapshotAuditAggregateOnly)}
+          </p>
+        </div>
+        <div className="grid gap-2 text-right text-sm sm:min-w-[220px]">
+          <span className="font-medium text-[#171717]">
+            {audit.snapshot.ts ? formatDateTime(audit.snapshot.ts, locale) : '--'}
+          </span>
+          <span className="text-black/58">
+            {t((m) => m.publicAgent.drawdown)} {formatPercent(audit.snapshot.drawdown, locale)}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <AuditMetric
+          label={t((m) => m.publicAgent.equity)}
+          value={formatCurrency(audit.snapshot.equity, locale)}
+        />
+        <AuditMetric
+          label={t((m) => m.publicAgent.cash)}
+          value={formatCurrency(audit.snapshot.cash, locale)}
+        />
+        <AuditMetric
+          label={t((m) => m.publicAgent.returnLabel)}
+          value={formatPercent(audit.snapshot.returnRate, locale)}
+        />
+      </div>
+
+      {audit.positions.length ? (
+        <div className="mt-4 overflow-x-auto border border-black/10 bg-white">
+          <table className="w-full min-w-[760px] text-sm">
+            <thead>
+              <tr className="border-b border-black/10 bg-[#fafafa]">
+                {[
+                  t((m) => m.publicAgent.symbol),
+                  t((m) => m.publicAgent.market),
+                  t((m) => m.publicAgent.positionSize),
+                  t((m) => m.publicAgent.auditPrice),
+                  t((m) => m.publicAgent.value),
+                  t((m) => m.publicAgent.pnl),
+                  t((m) => m.publicAgent.pricingSource),
+                ].map((label, index) => (
+                  <th
+                    key={label}
+                    className={cn(
+                      'px-3 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-black/42',
+                      index >= 2 && index <= 5 ? 'text-right' : 'text-left'
+                    )}
+                  >
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {audit.positions.map((position) => (
+                <tr key={position.id} className="border-b border-black/10 last:border-b-0">
+                  <td className="px-3 py-3">
+                    <p className="font-medium text-[#171717]">{position.symbol}</p>
+                    <p className="mt-1 text-xs text-black/48">
+                      {position.outcomeName || position.eventId || position.outcomeId || '--'}
+                    </p>
+                  </td>
+                  <td className="px-3 py-3 text-black/56">
+                    {formatMarketName(position.market, t)}
+                  </td>
+                  <td className="px-3 py-3 text-right text-[#171717]">
+                    {formatNumber(position.positionSize, locale)}
+                  </td>
+                  <td className="px-3 py-3 text-right text-black/56">
+                    {position.marketPrice != null
+                      ? formatCompactCurrency(position.marketPrice, locale)
+                      : '--'}
+                  </td>
+                  <td className="px-3 py-3 text-right text-[#171717]">
+                    {formatCurrency(position.marketValue, locale)}
+                  </td>
+                  <td
+                    className={cn(
+                      'px-3 py-3 text-right font-medium',
+                      (position.unrealizedPnl ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'
+                    )}
+                  >
+                    {formatCurrency(position.unrealizedPnl, locale)}
+                  </td>
+                  <td className="px-3 py-3 text-black/52">
+                    {formatPricingSource(position.pricingSource, t)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function AuditMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-black/10 bg-white px-3 py-3">
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-black/42">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-medium text-[#171717]">{value}</p>
+    </div>
+  );
+}
+
 function TradeMetaBlock({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -1097,6 +1317,17 @@ function formatRiskMode(
   if (riskTag === 'close_only') return t((m) => m.publicAgent.closeOnly);
   if (riskTag === 'high_risk') return t((m) => m.publicAgent.highRisk);
   return t((m) => m.publicAgent.riskNormal);
+}
+
+function formatPricingSource(
+  value: string | null | undefined,
+  t: ReturnType<typeof useSiteLocale>['t']
+) {
+  if (value === 'market_price') return t((m) => m.publicAgent.pricingSourceMarket);
+  if (value === 'entry_price_fallback') {
+    return t((m) => m.publicAgent.pricingSourceEntryFallback);
+  }
+  return value || '--';
 }
 
 function mapOwnedSummaryToPublic(
