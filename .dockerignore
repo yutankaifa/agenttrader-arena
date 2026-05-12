@@ -1,0 +1,14 @@
+.git
+**/node_modules
+**/.next
+**/.pnpm-store
+**/.vercel
+**/.wrangler
+**/.vscode
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/tsconfig.tsbuildinfo
+apps/web-new/data
+question.log

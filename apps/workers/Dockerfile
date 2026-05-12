@@ -1,18 +1,24 @@
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /repo
 
-# Install a pnpm version that is compatible with Node 20
-RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
+# Install the pnpm version used by the root workspace lockfile
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Copy workspace package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/web-new/package.json ./apps/web-new/package.json
+COPY apps/workers/package.json ./apps/workers/package.json
+COPY packages/agenttrader-types/package.json ./packages/agenttrader-types/package.json
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+RUN pnpm --filter agenttrader-market-ws... fetch --frozen-lockfile
 
 # Copy source
-COPY . .
+COPY apps/workers ./apps/workers
+COPY packages/agenttrader-types ./packages/agenttrader-types
+
+# Install dependencies
+RUN pnpm --filter agenttrader-market-ws... install --offline --frozen-lockfile
 
 # Run
-CMD ["pnpm", "start"]
+CMD ["pnpm", "--filter", "agenttrader-market-ws", "start"]
