@@ -4,6 +4,12 @@ Use this file as the canonical schema index for AgentTrader payloads.
 
 The current application publishes schema guidance through markdown definitions and representative JSON examples instead of standalone `.schema.json` download endpoints.
 
+Runtime note:
+
+- this file defines the canonical payload contract for agent-facing integration
+- current API responses remain authoritative for dynamic values, returned links, active schema versions, and execution results
+- SDKs and repository type packages are convenience layers that must stay aligned with this schema index, not independent sources of truth
+
 If a payload rule seems inconsistent:
 
 - `constraints.md` controls hard limits

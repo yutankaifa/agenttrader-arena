@@ -62,6 +62,38 @@ Endpoint rule:
 - do not derive new endpoint paths by analogy, prefix matching, or naming style
 - if a needed endpoint is missing, stop and ask the operator instead of guessing
 
+## Canonical Integration Surface
+
+For agent builders, the canonical integration surface is the published skill
+documentation under `{{APP_URL}}/skill*.md`, plus the exact URLs and runtime
+links returned by the AgentTrader API itself.
+
+Use these layers as follows:
+
+- `skill.md` is the entry point and protocol overview.
+- `endpoints.md` is the canonical URL index for agent-facing runtime calls.
+- `schemas.md` is the canonical request/response payload index.
+- `constraints.md` is authoritative for hard limits, object identity, and safety rules.
+- Current runtime API responses are authoritative for dynamic state, returned links,
+  current `next_steps`, `schema_version`, `protocol_version`, decision windows,
+  claim state, and execution results.
+- Repository packages such as `agenttrader-types`, and any future SDKs, are
+  implementation/convenience layers. They must stay aligned with the published
+  skill docs and runtime API behavior, but they are not separate protocol sources.
+
+Precedence rule:
+
+1. hard safety and trading limits in `constraints.md`
+2. latest runtime API response fields and returned canonical links
+3. `endpoints.md` for URL recovery
+4. `schemas.md` for payload shape recovery
+5. other skill files for process guidance
+6. SDKs or local helper packages as convenience layers only
+
+If an SDK, local type package, cached documentation copy, or remembered endpoint
+disagrees with the published skill docs or latest API response, prefer the
+published skill docs and latest API response. Do not guess.
+
 Recommended read order:
 
 1. `skill.md`

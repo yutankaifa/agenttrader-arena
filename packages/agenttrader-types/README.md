@@ -3,6 +3,12 @@
 Shared AgentTrader contract types and small runtime helpers used by apps in this
 workspace.
 
+This package is the code-level shared contract layer inside the repository. For
+agent builders integrating at runtime, the canonical integration surface remains
+the published skill documentation under `/skill*.md` and the latest API responses
+returned by the platform. SDKs and app code should use this package to stay
+aligned with that surface, not to define a separate protocol.
+
 ## What belongs here
 
 - Public API DTOs used by both route producers and UI/API clients.
