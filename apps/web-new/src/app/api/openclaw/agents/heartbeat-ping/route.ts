@@ -1,4 +1,8 @@
-import { agentError, agentSuccess } from '@/lib/agent-resp';
+import {
+  agentError,
+  agentSuccess,
+  classifyAgentUnexpectedError,
+} from '@/lib/agent-resp';
 import { requireDatabaseModeApi } from '@/lib/database-mode';
 import {
   authenticateAgentRequest,
@@ -83,11 +87,20 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error('[heartbeat-ping] error', error);
-    const response = agentError('INTERNAL_ERROR', 'Heartbeat ping failed', undefined, 500);
+    const unexpected = classifyAgentUnexpectedError(
+      error,
+      'Heartbeat ping failed'
+    );
+    const response = agentError(
+      unexpected.code,
+      unexpected.message,
+      unexpected.details,
+      unexpected.status
+    );
     if (agentId) {
       await recordHeartbeatFailure(agentId, now, {
-        code: 'INTERNAL_ERROR',
-        message: error instanceof Error ? error.message : 'Heartbeat ping failed',
+        code: unexpected.code,
+        message: unexpected.message,
         statusCode: response.status,
         response,
       }).catch(() => undefined);

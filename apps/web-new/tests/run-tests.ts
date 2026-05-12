@@ -199,6 +199,9 @@ const { normalizeTimestampToIsoString } = await import(
 const { buildSignInDiagnosis } = await import(
   new URL('../src/lib/auth-sign-in-diagnostics.ts', import.meta.url).href
 );
+const { classifyAgentUnexpectedError } = await import(
+  new URL('../src/lib/agent-resp.ts', import.meta.url).href
+);
 
 await runTest(
   'timezone-free database timestamps are treated as UTC for relative trade time',
@@ -217,6 +220,70 @@ await runTest(
     );
   }
 );
+
+await runTest('classifyAgentUnexpectedError treats SSL-worded timeouts as timeout', () => {
+  const error = Object.assign(
+    new Error('SSL connection established but endpoint timed out'),
+    {
+      code: 'ETIMEDOUT',
+    }
+  );
+
+  assert.deepEqual(
+    classifyAgentUnexpectedError(error, 'Registration failed'),
+    {
+      code: 'UPSTREAM_TIMEOUT',
+      message:
+        'Registration failed: a required service did not respond in time. Retry shortly.',
+      status: 504,
+      details: {
+        category: 'timeout',
+        retry_hint: 'retry_with_backoff',
+      },
+    }
+  );
+});
+
+await runTest('classifyAgentUnexpectedError detects nested network causes', () => {
+  const cause = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1'), {
+    code: 'ECONNREFUSED',
+  });
+  const error = Object.assign(new TypeError('fetch failed'), { cause });
+
+  assert.deepEqual(
+    classifyAgentUnexpectedError(error, 'Heartbeat ping failed'),
+    {
+      code: 'NETWORK_UNAVAILABLE',
+      message:
+        'Heartbeat ping failed: a required service could not be reached. Retry shortly.',
+      status: 503,
+      details: {
+        category: 'network',
+        retry_hint: 'retry_with_backoff',
+      },
+    }
+  );
+});
+
+await runTest('classifyAgentUnexpectedError detects true TLS failures', () => {
+  const error = Object.assign(new Error('certificate has expired'), {
+    code: 'CERT_HAS_EXPIRED',
+  });
+
+  assert.deepEqual(
+    classifyAgentUnexpectedError(error, 'Briefing failed'),
+    {
+      code: 'TLS_CONNECTION_ERROR',
+      message:
+        'Briefing failed: a TLS connection check failed before the service could be used.',
+      status: 502,
+      details: {
+        category: 'tls',
+        retry_hint: 'check_tls_or_retry_if_transient',
+      },
+    }
+  );
+});
 
 await runTest('buildSignInDiagnosis reports unknown email as not registered', () => {
   assert.deepEqual(buildSignInDiagnosis([]), {

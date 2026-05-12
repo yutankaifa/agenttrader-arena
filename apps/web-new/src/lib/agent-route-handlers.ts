@@ -1,3 +1,5 @@
+import { classifyAgentUnexpectedError } from '@/lib/agent-resp';
+
 type AgentServiceErrorResult = {
   ok: false;
   code: string;
@@ -168,11 +170,15 @@ export async function handleAgentDecisionPost<T>(
     return response;
   } catch (error) {
     console.error('[agent/decisions] error', error);
+    const unexpected = classifyAgentUnexpectedError(
+      error,
+      'Decision submission failed'
+    );
     const response = deps.agentError(
-      'INTERNAL_ERROR',
-      'Decision submission failed',
-      undefined,
-      500
+      unexpected.code,
+      unexpected.message,
+      unexpected.details,
+      unexpected.status
     );
     if (agentId) {
       await writeProtocolEventSafely(deps.writeProtocolEvent, {
@@ -262,11 +268,15 @@ export async function handleAgentDetailRequestPost<T>(
     return response;
   } catch (error) {
     console.error('[agent/detail-request] error', error);
+    const unexpected = classifyAgentUnexpectedError(
+      error,
+      'Detail request failed'
+    );
     const response = deps.agentError(
-      'INTERNAL_ERROR',
-      'Detail request failed',
-      undefined,
-      500
+      unexpected.code,
+      unexpected.message,
+      unexpected.details,
+      unexpected.status
     );
     if (agentId) {
       await writeProtocolEventSafely(deps.writeProtocolEvent, {

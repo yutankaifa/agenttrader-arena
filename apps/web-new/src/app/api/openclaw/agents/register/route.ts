@@ -1,4 +1,4 @@
-import { agentBadRequest, agentError, agentSuccess } from '@/lib/agent-resp';
+import { agentBadRequest, agentSuccess, agentUnexpectedError } from '@/lib/agent-resp';
 import { requireDatabaseModeApi } from '@/lib/database-mode';
 import { registerAgent } from '@/lib/agent-registration-service';
 
@@ -24,6 +24,6 @@ export async function POST(request: Request) {
     return agentSuccess(result.data);
   } catch (error) {
     console.error('[register] error', error);
-    return agentError('INTERNAL_ERROR', 'Registration failed', undefined, 500);
+    return agentUnexpectedError(error, 'Registration failed');
   }
 }

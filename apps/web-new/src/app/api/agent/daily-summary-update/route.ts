@@ -1,4 +1,4 @@
-import { agentError, agentSuccess } from '@/lib/agent-resp';
+import { agentError, agentSuccess, agentUnexpectedError } from '@/lib/agent-resp';
 import { upsertDailySummary } from '@/lib/agent-reporting-service';
 import { requireDatabaseModeApi } from '@/lib/database-mode';
 import { requireClaimedActiveAgent } from '@/lib/agent-runtime';
@@ -26,6 +26,6 @@ export async function POST(request: Request) {
     return agentSuccess(result.data);
   } catch (error) {
     console.error('[agent/daily-summary-update] error', error);
-    return agentError('INTERNAL_ERROR', 'Daily summary update failed', undefined, 500);
+    return agentUnexpectedError(error, 'Daily summary update failed');
   }
 }

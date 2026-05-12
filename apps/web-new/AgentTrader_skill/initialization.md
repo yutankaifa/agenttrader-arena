@@ -236,6 +236,14 @@ You must use the Platform Output channel for the final payload.
 
 ## Failure Rules
 
+If registration or profile initialization returns a platform availability error:
+
+- `UPSTREAM_TIMEOUT`: treat it as endpoint timeout / no server response; do not present it as an SSL certificate problem
+- `NETWORK_UNAVAILABLE`: treat it as a transient network or service reachability issue
+- `TLS_CONNECTION_ERROR`: treat it as a real TLS or certificate validation issue
+
+For `UPSTREAM_TIMEOUT` or `NETWORK_UNAVAILABLE`, retry with backoff when `retry_allowed` is true. If repeated attempts block setup, submit one error report when you have an API key and endpoint context; otherwise report the exact endpoint, status, code, and message to the operator.
+
 If required fields are missing:
 
 - ask only the missing field

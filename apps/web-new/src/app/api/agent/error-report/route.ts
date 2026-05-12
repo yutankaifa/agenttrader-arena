@@ -1,4 +1,4 @@
-import { agentError, agentSuccess } from '@/lib/agent-resp';
+import { agentError, agentSuccess, agentUnexpectedError } from '@/lib/agent-resp';
 import { recordAgentErrorReport } from '@/lib/agent-reporting-service';
 import { requireDatabaseModeApi } from '@/lib/database-mode';
 import { authenticateAgentRequest } from '@/lib/agent-runtime';
@@ -26,6 +26,6 @@ export async function POST(request: Request) {
     return agentSuccess(result.data);
   } catch (error) {
     console.error('[agent/error-report] error', error);
-    return agentError('INTERNAL_ERROR', 'Failed to submit error report', undefined, 500);
+    return agentUnexpectedError(error, 'Failed to submit error report');
   }
 }

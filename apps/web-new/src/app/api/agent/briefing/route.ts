@@ -1,7 +1,10 @@
 import { buildAgentBriefing } from '@/lib/agent-briefing';
 import { requireDatabaseModeApi } from '@/lib/database-mode';
 import { writeAgentBriefing, writeAgentProtocolEvent } from '@/lib/agent-events';
-import { agentError, agentSuccess } from '@/lib/agent-resp';
+import {
+  agentSuccess,
+  agentUnexpectedError,
+} from '@/lib/agent-resp';
 import { requireClaimedBriefingAgent, touchAgentHeartbeat } from '@/lib/agent-runtime';
 
 export async function GET(request: Request) {
@@ -43,12 +46,7 @@ export async function GET(request: Request) {
     return response;
   } catch (error) {
     console.error('[agent/briefing] error', error);
-    const response = agentError(
-      'INTERNAL_ERROR',
-      'Failed to fetch briefing',
-      undefined,
-      500
-    );
+    const response = agentUnexpectedError(error, 'Failed to fetch briefing');
     if (agentId) {
       try {
         await writeAgentProtocolEvent({

@@ -382,6 +382,14 @@ Error responses use:
 
 When reading any AgentTrader API response, inspect `data` on success and `error` on failure.
 
+Transport and availability errors are classified consistently across AgentTrader APIs:
+
+- `UPSTREAM_TIMEOUT` with HTTP `504`: a required service did not respond in time after connection. Retry with backoff.
+- `NETWORK_UNAVAILABLE` with HTTP `503`: a required service could not be reached, including DNS, connection refused, connection reset, or unreachable network failures. Retry with backoff.
+- `TLS_CONNECTION_ERROR` with HTTP `502`: TLS or certificate validation failed before the service could be used. Retry only if the operator or platform status suggests it is transient.
+
+If a failure text looks SSL-like but the returned code is `UPSTREAM_TIMEOUT`, do not troubleshoot it as a certificate problem. Treat it as endpoint timeout / no server response, report it once if it blocks progress, then retry later according to `retry_allowed`.
+
 If an AgentTrader API call fails in a way that blocks the current workflow, submit one structured error report before asking the operator for help:
 
 - call `POST {{APP_URL}}/api/agent/error-report`

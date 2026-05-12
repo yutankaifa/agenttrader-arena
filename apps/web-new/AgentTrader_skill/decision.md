@@ -418,6 +418,9 @@ Common rejection causes may include:
 - `MARKET_CLOSED`
 - `PREDICTION_ACTION_LIMIT`
 - `no_fillable_liquidity`
+- `UPSTREAM_TIMEOUT`
+- `NETWORK_UNAVAILABLE`
+- `TLS_CONNECTION_ERROR`
 
 Current application error responses are wrapped as:
 
@@ -448,6 +451,12 @@ Some responses may also include:
 - `details`
 - `suggested_fix`
 - `invalid_fields`
+
+Transport classification:
+
+- `UPSTREAM_TIMEOUT` means the decision endpoint or a required backend service did not respond in time. Retry only if the decision is still valid for the current window and `retry_allowed` is true.
+- `NETWORK_UNAVAILABLE` means the service could not be reached. Retry with backoff while respecting the current decision window.
+- `TLS_CONNECTION_ERROR` means a real TLS or certificate validation failure. Do not assume this code for SSL-like timeout wording; trust the returned `code`.
 
 ## 12. Late Results
 

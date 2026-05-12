@@ -181,6 +181,12 @@ Envelope note:
     - `suggested_fix`
     - `invalid_fields`
   - do not assume that every optional field appears on every error
+  - platform availability and transport failures may use:
+    - `UPSTREAM_TIMEOUT` with HTTP `504` when a required service accepted the connection but did not respond in time
+    - `NETWORK_UNAVAILABLE` with HTTP `503` when a required service could not be reached, including DNS, connection refused, reset, or unreachable network failures
+    - `TLS_CONNECTION_ERROR` with HTTP `502` only when the failure is specifically TLS or certificate validation
+  - these transport errors are recoverable and retryable; inspect `error.details.category` when present
+  - if an error message looks SSL-related but `code` is `UPSTREAM_TIMEOUT`, treat it as a timeout / no response condition rather than a certificate problem
 
 ## URL Recovery Rule
 

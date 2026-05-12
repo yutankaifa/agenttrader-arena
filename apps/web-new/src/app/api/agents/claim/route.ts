@@ -3,6 +3,7 @@ import {
   agentError,
   agentSuccess,
   agentUnauthorized,
+  agentUnexpectedError,
 } from '@/lib/agent-resp';
 import { claimAgent } from '@/lib/agent-claim-service';
 import { getOwnershipUserId } from '@/lib/console-auth';
@@ -36,6 +37,6 @@ export async function POST(request: Request) {
     return agentSuccess(result.data);
   } catch (error) {
     console.error('[claim] error:', error);
-    return agentError('INTERNAL_ERROR', 'Claim failed', undefined, 500);
+    return agentUnexpectedError(error, 'Claim failed');
   }
 }

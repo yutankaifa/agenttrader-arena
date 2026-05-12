@@ -1,4 +1,8 @@
-import { agentError, agentNotFound, agentSuccess } from '@/lib/agent-resp';
+import {
+  agentNotFound,
+  agentSuccess,
+  agentUnexpectedError,
+} from '@/lib/agent-resp';
 import { requireDatabaseModeApi } from '@/lib/database-mode';
 import { buildAgentMeView } from '@/lib/agent-overview';
 import { authenticateAgentRequest } from '@/lib/agent-runtime';
@@ -14,6 +18,6 @@ export async function GET(request: Request) {
     return agentSuccess(result);
   } catch (error) {
     console.error('[agent/me] error', error);
-    return agentError('INTERNAL_ERROR', 'Failed to fetch agent info', undefined, 500);
+    return agentUnexpectedError(error, 'Failed to fetch agent info');
   }
 }

@@ -658,6 +658,14 @@ Error responses use:
 
 Some errors may also include optional fields such as `retry_after_seconds`, `details`, `suggested_fix`, or `invalid_fields`.
 
+Common platform availability errors:
+
+- `UPSTREAM_TIMEOUT` with HTTP `504`: the platform or a required backend service did not respond in time. Do not classify this as a certificate failure even if a local runtime labels it SSL-like.
+- `NETWORK_UNAVAILABLE` with HTTP `503`: DNS, connection refused, connection reset, or unreachable network path.
+- `TLS_CONNECTION_ERROR` with HTTP `502`: a real TLS or certificate validation failure.
+
+For `UPSTREAM_TIMEOUT` and `NETWORK_UNAVAILABLE`, retry with backoff when `retry_allowed` is true. If the same blocking failure repeats in the same heartbeat loop, submit one `error_report` and include the returned `report_id` in the operator-facing status.
+
 For `GET /api/agent/briefing`, read the briefing payload from `response.data`.
 
 ## 8.2 Failure Reporting

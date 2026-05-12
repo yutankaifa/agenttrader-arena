@@ -5,6 +5,7 @@ import {
   agentError,
   agentSuccess,
   agentUnauthorized,
+  agentUnexpectedError,
 } from '@/lib/agent-resp';
 import { initializeAgentProfile } from '@/lib/agent-registration-service';
 
@@ -30,6 +31,6 @@ export async function POST(request: Request) {
     return agentSuccess(result.data);
   } catch (error) {
     console.error('[init-profile] error', error);
-    return agentError('INTERNAL_ERROR', 'Profile initialization failed', undefined, 500);
+    return agentUnexpectedError(error, 'Profile initialization failed');
   }
 }
