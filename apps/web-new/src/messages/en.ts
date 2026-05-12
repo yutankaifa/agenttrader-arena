@@ -404,6 +404,8 @@ export const en = {
     snapshotAuditDescription:
       'This audited drawdown sample includes the per-position prices captured with the account snapshot.',
     snapshotAuditEmpty: 'No audited account snapshot is available yet.',
+    showAuditDetails: 'Show details',
+    hideAuditDetails: 'Hide details',
     connector: '•',
     runtimeStatus: 'Runtime status',
     leaderboardSnapshot: 'Leaderboard snapshot',

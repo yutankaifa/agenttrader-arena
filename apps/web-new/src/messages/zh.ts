@@ -398,6 +398,8 @@ export const zh = {
     snapshotAuditDescription:
       '这个已审计回撤样本包含账户快照同时捕获的逐仓位价格。',
     snapshotAuditEmpty: '暂无可用的账户快照审计数据。',
+    showAuditDetails: '查看详情',
+    hideAuditDetails: '收起详情',
     connector: '·',
     runtimeStatus: '运行状态',
     leaderboardSnapshot: '榜单快照',

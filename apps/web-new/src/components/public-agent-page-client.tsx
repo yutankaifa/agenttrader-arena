@@ -898,9 +898,11 @@ function SnapshotAuditCard({
   locale: string;
   t: ReturnType<typeof useSiteLocale>['t'];
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (isLoading) {
     return (
-      <div className="mt-5 h-32 animate-pulse rounded-xl border border-black/10 bg-[#faf8f3]" />
+      <div className="mt-5 h-20 animate-pulse rounded-xl border border-black/10 bg-[#faf8f3]" />
     );
   }
 
@@ -916,105 +918,122 @@ function SnapshotAuditCard({
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-black/10 bg-[#fafafa] p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mt-5 overflow-hidden rounded-xl border border-black/10 bg-[#fafafa]">
+      <button
+        type="button"
+        className="flex w-full flex-col gap-3 p-4 text-left transition hover:bg-black/[0.02] sm:flex-row sm:items-center sm:justify-between"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+      >
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-black/42">
             {t((m) => m.publicAgent.snapshotAudit)}
           </p>
-          <p className="mt-2 text-sm leading-6 text-black/58">
-            {t((m) => m.publicAgent.snapshotAuditDescription)}
+          <p className="mt-2 text-sm text-black/58">
+            {audit.snapshot.ts ? formatDateTime(audit.snapshot.ts, locale) : '--'}
           </p>
         </div>
-        <div className="grid gap-2 text-right text-sm sm:min-w-[220px]">
-          <span className="font-medium text-[#171717]">
-            {audit.snapshot.ts ? formatDateTime(audit.snapshot.ts, locale) : '--'}
-          </span>
+        <div className="flex flex-wrap items-center gap-3 text-sm sm:justify-end">
           <span className="text-black/58">
             {t((m) => m.publicAgent.drawdown)} {formatPercent(audit.snapshot.drawdown, locale)}
           </span>
+          <span className="rounded-full border border-black/10 bg-white px-3 py-1 font-medium text-[#171717]">
+            {expanded
+              ? t((m) => m.publicAgent.hideAuditDetails)
+              : t((m) => m.publicAgent.showAuditDetails)}
+          </span>
         </div>
-      </div>
+      </button>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <AuditMetric
-          label={t((m) => m.publicAgent.equity)}
-          value={formatCurrency(audit.snapshot.equity, locale)}
-        />
-        <AuditMetric
-          label={t((m) => m.publicAgent.cash)}
-          value={formatCurrency(audit.snapshot.cash, locale)}
-        />
-        <AuditMetric
-          label={t((m) => m.publicAgent.returnLabel)}
-          value={formatPercent(audit.snapshot.returnRate, locale)}
-        />
-      </div>
+      {expanded ? (
+        <div className="border-t border-black/10 p-4">
+          <p className="text-sm leading-6 text-black/58">
+            {t((m) => m.publicAgent.snapshotAuditDescription)}
+          </p>
 
-      {audit.positions.length ? (
-        <div className="mt-4 overflow-x-auto border border-black/10 bg-white">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="border-b border-black/10 bg-[#fafafa]">
-                {[
-                  t((m) => m.publicAgent.symbol),
-                  t((m) => m.publicAgent.market),
-                  t((m) => m.publicAgent.positionSize),
-                  t((m) => m.publicAgent.auditPrice),
-                  t((m) => m.publicAgent.value),
-                  t((m) => m.publicAgent.pnl),
-                  t((m) => m.publicAgent.pricingSource),
-                ].map((label, index) => (
-                  <th
-                    key={label}
-                    className={cn(
-                      'px-3 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-black/42',
-                      index >= 2 && index <= 5 ? 'text-right' : 'text-left'
-                    )}
-                  >
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {audit.positions.map((position) => (
-                <tr key={position.id} className="border-b border-black/10 last:border-b-0">
-                  <td className="px-3 py-3">
-                    <p className="font-medium text-[#171717]">{position.symbol}</p>
-                    <p className="mt-1 text-xs text-black/48">
-                      {position.outcomeName || position.eventId || position.outcomeId || '--'}
-                    </p>
-                  </td>
-                  <td className="px-3 py-3 text-black/56">
-                    {formatMarketName(position.market, t)}
-                  </td>
-                  <td className="px-3 py-3 text-right text-[#171717]">
-                    {formatNumber(position.positionSize, locale)}
-                  </td>
-                  <td className="px-3 py-3 text-right text-black/56">
-                    {position.marketPrice != null
-                      ? formatCompactCurrency(position.marketPrice, locale)
-                      : '--'}
-                  </td>
-                  <td className="px-3 py-3 text-right text-[#171717]">
-                    {formatCurrency(position.marketValue, locale)}
-                  </td>
-                  <td
-                    className={cn(
-                      'px-3 py-3 text-right font-medium',
-                      (position.unrealizedPnl ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'
-                    )}
-                  >
-                    {formatCurrency(position.unrealizedPnl, locale)}
-                  </td>
-                  <td className="px-3 py-3 text-black/52">
-                    {formatPricingSource(position.pricingSource, t)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <AuditMetric
+              label={t((m) => m.publicAgent.equity)}
+              value={formatCurrency(audit.snapshot.equity, locale)}
+            />
+            <AuditMetric
+              label={t((m) => m.publicAgent.cash)}
+              value={formatCurrency(audit.snapshot.cash, locale)}
+            />
+            <AuditMetric
+              label={t((m) => m.publicAgent.returnLabel)}
+              value={formatPercent(audit.snapshot.returnRate, locale)}
+            />
+          </div>
+
+          {audit.positions.length ? (
+            <div className="mt-4 overflow-x-auto border border-black/10 bg-white">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead>
+                  <tr className="border-b border-black/10 bg-[#fafafa]">
+                    {[
+                      t((m) => m.publicAgent.symbol),
+                      t((m) => m.publicAgent.market),
+                      t((m) => m.publicAgent.positionSize),
+                      t((m) => m.publicAgent.auditPrice),
+                      t((m) => m.publicAgent.value),
+                      t((m) => m.publicAgent.pnl),
+                      t((m) => m.publicAgent.pricingSource),
+                    ].map((label, index) => (
+                      <th
+                        key={label}
+                        className={cn(
+                          'px-3 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-black/42',
+                          index >= 2 && index <= 5 ? 'text-right' : 'text-left'
+                        )}
+                      >
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {audit.positions.map((position) => (
+                    <tr key={position.id} className="border-b border-black/10 last:border-b-0">
+                      <td className="px-3 py-3">
+                        <p className="font-medium text-[#171717]">{position.symbol}</p>
+                        <p className="mt-1 text-xs text-black/48">
+                          {position.outcomeName || position.eventId || position.outcomeId || '--'}
+                        </p>
+                      </td>
+                      <td className="px-3 py-3 text-black/56">
+                        {formatMarketName(position.market, t)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-[#171717]">
+                        {formatNumber(position.positionSize, locale)}
+                      </td>
+                      <td className="px-3 py-3 text-right text-black/56">
+                        {position.marketPrice != null
+                          ? formatCompactCurrency(position.marketPrice, locale)
+                          : '--'}
+                      </td>
+                      <td className="px-3 py-3 text-right text-[#171717]">
+                        {formatCurrency(position.marketValue, locale)}
+                      </td>
+                      <td
+                        className={cn(
+                          'px-3 py-3 text-right font-medium',
+                          (position.unrealizedPnl ?? 0) >= 0
+                            ? 'text-emerald-600'
+                            : 'text-red-600'
+                        )}
+                      >
+                        {formatCurrency(position.unrealizedPnl, locale)}
+                      </td>
+                      <td className="px-3 py-3 text-black/52">
+                        {formatPricingSource(position.pricingSource, t)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
