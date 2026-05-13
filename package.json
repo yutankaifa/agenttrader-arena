@@ -8,8 +8,10 @@
   "keywords": [],
   "main": "index.js",
   "scripts": {
+    "ci": "pnpm lint && pnpm test",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "pnpm --filter web-new test"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^8.2.0",

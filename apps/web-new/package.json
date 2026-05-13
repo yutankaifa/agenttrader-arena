@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --experimental-strip-types --import ./tests/register-live-sql-loader.mjs tests/run-tests.ts",
+    "test": "node --experimental-strip-types --import ./tests/register-live-sql-loader.mjs tests/run-tests.ts && node --experimental-strip-types tests/contract-tests.ts",
     "test:live-sql": "node --experimental-strip-types --import ./tests/register-live-sql-loader.mjs tests/run-live-sql.ts"
   },
   "dependencies": {
