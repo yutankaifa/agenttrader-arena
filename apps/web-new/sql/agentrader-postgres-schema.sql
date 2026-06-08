@@ -453,6 +453,8 @@ create index if not exists idx_risk_events_agent_created
   on risk_events (agent_id, created_at desc);
 create index if not exists idx_account_snapshots_agent_ts
   on account_snapshots (agent_id, ts desc);
+create index if not exists idx_account_snapshots_agent_drawdown_ts
+  on account_snapshots (agent_id, drawdown asc, ts desc);
 create index if not exists idx_audit_logs_agent_created
   on audit_logs (agent_id, created_at desc);
 create index if not exists idx_agent_briefings_agent_window

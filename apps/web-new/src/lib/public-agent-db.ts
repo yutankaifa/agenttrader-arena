@@ -313,10 +313,28 @@ export async function listPublicAgentPositionsFromDatabase(
       p.outcome_name,
       p.position_size,
       p.entry_price as avg_price,
-      coalesce(latest_quote.last_price, nullif(p.market_price, 0), p.entry_price, 0) as market_price,
-      coalesce(latest_quote.last_price, nullif(p.market_price, 0), p.entry_price, 0) * coalesce(p.position_size, 0) as market_value,
+      coalesce(
+        quote_exact.last_price,
+        quote_instrument.last_price,
+        nullif(p.market_price, 0),
+        p.entry_price,
+        0
+      ) as market_price,
+      coalesce(
+        quote_exact.last_price,
+        quote_instrument.last_price,
+        nullif(p.market_price, 0),
+        p.entry_price,
+        0
+      ) * coalesce(p.position_size, 0) as market_value,
       (
-        coalesce(latest_quote.last_price, nullif(p.market_price, 0), p.entry_price, 0) -
+        coalesce(
+          quote_exact.last_price,
+          quote_instrument.last_price,
+          nullif(p.market_price, 0),
+          p.entry_price,
+          0
+        ) -
         coalesce(p.entry_price, 0)
       ) * coalesce(p.position_size, 0) as unrealized_pnl,
       p.updated_at
@@ -325,19 +343,23 @@ export async function listPublicAgentPositionsFromDatabase(
     left join lateral (
       select mds.last_price
       from market_data_snapshots mds
-      left join market_instruments mi on mi.id = mds.instrument_id
-      where (
-        coalesce(p.outcome_id, '') <> '' and
-        mds.instrument_id = p.symbol || '::' || p.outcome_id
-      ) or (
-        coalesce(p.outcome_id, '') = '' and (
-          (mi.symbol = p.symbol and mi.market = p.market) or
-          mds.instrument_id = p.symbol
-        )
-      )
+      where mds.instrument_id = case
+        when coalesce(p.outcome_id, '') <> '' then p.symbol || '::' || p.outcome_id
+        else p.symbol
+      end
       order by mds.quote_ts desc
       limit 1
-    ) latest_quote on true
+    ) quote_exact on true
+    left join lateral (
+      select mds.last_price
+      from market_instruments mi
+      inner join market_data_snapshots mds on mds.instrument_id = mi.id
+      where coalesce(p.outcome_id, '') = ''
+        and mi.market = p.market
+        and upper(mi.symbol) = upper(p.symbol)
+      order by mds.quote_ts desc
+      limit 1
+    ) quote_instrument on true
     where p.agent_id = ${agentId}
       and a.claim_status = 'claimed'
     order by p.symbol asc
@@ -583,25 +605,35 @@ async function getPublicAgentLiveEquityFromDatabase(
       select
         sum(
           coalesce(p.position_size, 0) *
-          coalesce(latest_quote.last_price, nullif(p.market_price, 0), p.entry_price, 0)
+          coalesce(
+            quote_exact.last_price,
+            quote_instrument.last_price,
+            nullif(p.market_price, 0),
+            p.entry_price,
+            0
+          )
         ) as gross_market_value
       from positions p
       left join lateral (
         select mds.last_price
         from market_data_snapshots mds
-        left join market_instruments mi on mi.id = mds.instrument_id
-        where (
-          coalesce(p.outcome_id, '') <> '' and
-          mds.instrument_id = p.symbol || '::' || p.outcome_id
-        ) or (
-          coalesce(p.outcome_id, '') = '' and (
-            (mi.symbol = p.symbol and mi.market = p.market) or
-            mds.instrument_id = p.symbol
-          )
-        )
+        where mds.instrument_id = case
+          when coalesce(p.outcome_id, '') <> '' then p.symbol || '::' || p.outcome_id
+          else p.symbol
+        end
         order by mds.quote_ts desc
         limit 1
-      ) latest_quote on true
+      ) quote_exact on true
+      left join lateral (
+        select mds.last_price
+        from market_instruments mi
+        inner join market_data_snapshots mds on mds.instrument_id = mi.id
+        where coalesce(p.outcome_id, '') = ''
+          and mi.market = p.market
+          and upper(mi.symbol) = upper(p.symbol)
+        order by mds.quote_ts desc
+        limit 1
+      ) quote_instrument on true
       where p.agent_id = acct.agent_id
     ) position_values on true
     where acct.agent_id = ${agentId}

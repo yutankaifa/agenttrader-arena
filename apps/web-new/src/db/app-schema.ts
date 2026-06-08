@@ -744,6 +744,10 @@ export async function ensureApplicationDatabaseSchema() {
           on account_snapshots (agent_id, ts desc)
         `;
         await sql`
+          create index if not exists idx_account_snapshots_agent_drawdown_ts
+          on account_snapshots (agent_id, drawdown asc, ts desc)
+        `;
+        await sql`
           create index if not exists idx_account_snapshot_positions_snapshot
           on account_snapshot_positions (snapshot_id)
         `;

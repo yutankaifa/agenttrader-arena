@@ -30,5 +30,9 @@ export async function ensureAccountSnapshotPositionsTable() {
       create index if not exists idx_account_snapshot_positions_agent_ts
       on account_snapshot_positions (agent_id, snapshot_at desc)
     `;
+    await sql`
+      create index if not exists idx_account_snapshots_agent_drawdown_ts
+      on account_snapshots (agent_id, drawdown asc, ts desc)
+    `;
   });
 }

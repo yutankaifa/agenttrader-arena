@@ -307,26 +307,42 @@ export async function getPublicHomeOverviewFromDatabase(): Promise<PublicHomeOve
         p.outcome_name,
         p.position_size,
         p.entry_price,
-        coalesce(latest_quote.last_price, nullif(p.market_price, 0), p.entry_price, 0) as market_price,
-        coalesce(latest_quote.last_price, nullif(p.market_price, 0), p.entry_price, 0) * coalesce(p.position_size, 0) as market_value
+        coalesce(
+          quote_exact.last_price,
+          quote_instrument.last_price,
+          nullif(p.market_price, 0),
+          p.entry_price,
+          0
+        ) as market_price,
+        coalesce(
+          quote_exact.last_price,
+          quote_instrument.last_price,
+          nullif(p.market_price, 0),
+          p.entry_price,
+          0
+        ) * coalesce(p.position_size, 0) as market_value
       from positions p
       inner join agents a on a.id = p.agent_id
       left join lateral (
         select mds.last_price
         from market_data_snapshots mds
-        left join market_instruments mi on mi.id = mds.instrument_id
-        where (
-          coalesce(p.outcome_id, '') <> '' and
-          mds.instrument_id = p.symbol || '::' || p.outcome_id
-        ) or (
-          coalesce(p.outcome_id, '') = '' and (
-            (mi.symbol = p.symbol and mi.market = p.market) or
-            mds.instrument_id = p.symbol
-          )
-        )
+        where mds.instrument_id = case
+          when coalesce(p.outcome_id, '') <> '' then p.symbol || '::' || p.outcome_id
+          else p.symbol
+        end
         order by mds.quote_ts desc
         limit 1
-      ) latest_quote on true
+      ) quote_exact on true
+      left join lateral (
+        select mds.last_price
+        from market_instruments mi
+        inner join market_data_snapshots mds on mds.instrument_id = mi.id
+        where coalesce(p.outcome_id, '') = ''
+          and mi.market = p.market
+          and upper(mi.symbol) = upper(p.symbol)
+        order by mds.quote_ts desc
+        limit 1
+      ) quote_instrument on true
       where a.claim_status = 'claimed'
         and coalesce(p.position_size, 0) > 0
         and p.updated_at > ${startOfLast24HoursIso}
@@ -342,102 +358,120 @@ export async function getPublicHomeOverviewFromDatabase(): Promise<PublicHomeOve
           timezone('America/New_York', now())::date
     `,
     sql<HomeCallInsightDatabaseRow[]>`
-      with latest_ranks as (
+      with recent_calls as materialized (
         select
-          agent_id,
-          rank,
-          row_number() over (
-            partition by agent_id
-            order by snapshot_at desc, rank asc
-          ) as row_num
-        from leaderboard_snapshots
+          te.id as execution_id,
+          te.filled_units,
+          te.fill_price,
+          te.fee,
+          te.executed_at,
+          ds.agent_id,
+          a.name as agent_name,
+          a.avatar_url as agent_avatar,
+          da.symbol,
+          da.market,
+          da.side,
+          da.event_id,
+          da.outcome_id,
+          da.outcome_name,
+          da.reason_tag,
+          da.display_rationale
+        from trade_executions te
+        inner join decision_actions da on da.id = te.action_id
+        inner join decision_submissions ds on ds.id = da.submission_id
+        inner join agents a on a.id = ds.agent_id
+        where a.claim_status = 'claimed'
+          and da.status in ('filled', 'partial')
+          and coalesce(te.filled_units, 0) > 0
+          and coalesce(te.fill_price, 0) > 0
+          and te.executed_at > ${startOfLast24HoursIso}
+        order by te.executed_at desc
+        limit 200
       )
       select
-        ds.agent_id,
-        a.name as agent_name,
-        a.avatar_url as agent_avatar,
-        da.symbol,
-        da.market,
-        da.side,
-        da.outcome_name,
-        da.reason_tag,
-        da.display_rationale,
-        te.filled_units,
-        te.fill_price,
+        rc.agent_id,
+        rc.agent_name,
+        rc.agent_avatar,
+        rc.symbol,
+        rc.market,
+        rc.side,
+        rc.outcome_name,
+        rc.reason_tag,
+        rc.display_rationale,
+        rc.filled_units,
+        rc.fill_price,
         coalesce(
           quote_exact.last_price,
-          quote_spot.last_price,
+          quote_instrument.last_price,
           matched_position.market_price,
           matched_position.entry_price,
-          te.fill_price
+          rc.fill_price
         ) as mark_price,
         case
-          when upper(da.side) = 'BUY' then
-            te.filled_units * (
+          when upper(rc.side) = 'BUY' then
+            rc.filled_units * (
               coalesce(
                 quote_exact.last_price,
-                quote_spot.last_price,
+                quote_instrument.last_price,
                 matched_position.market_price,
                 matched_position.entry_price,
-                te.fill_price
-              ) - te.fill_price
-            ) - coalesce(te.fee, 0)
-          when upper(da.side) = 'SELL' then
-            te.filled_units * (
-              te.fill_price - coalesce(
+                rc.fill_price
+              ) - rc.fill_price
+            ) - coalesce(rc.fee, 0)
+          when upper(rc.side) = 'SELL' then
+            rc.filled_units * (
+              rc.fill_price - coalesce(
                 quote_exact.last_price,
-                quote_spot.last_price,
+                quote_instrument.last_price,
                 matched_position.market_price,
                 matched_position.entry_price,
-                te.fill_price
+                rc.fill_price
               )
-            ) - coalesce(te.fee, 0)
+            ) - coalesce(rc.fee, 0)
           else 0
         end as call_pnl_usd,
-        latest_ranks.rank as current_rank,
-        te.executed_at
-      from trade_executions te
-      inner join decision_actions da on da.id = te.action_id
-      inner join decision_submissions ds on ds.id = da.submission_id
-      inner join agents a on a.id = ds.agent_id
-      left join latest_ranks on latest_ranks.agent_id = ds.agent_id and latest_ranks.row_num = 1
+        latest_rank.rank as current_rank,
+        rc.executed_at
+      from recent_calls rc
+      left join lateral (
+        select ls.rank
+        from leaderboard_snapshots ls
+        where ls.agent_id = rc.agent_id
+        order by ls.snapshot_at desc, ls.rank asc
+        limit 1
+      ) latest_rank on true
       left join lateral (
         select mds.last_price
         from market_data_snapshots mds
         where mds.instrument_id = case
-          when coalesce(da.outcome_id, '') <> '' then da.symbol || '::' || da.outcome_id
-          else da.symbol
+          when coalesce(rc.outcome_id, '') <> '' then rc.symbol || '::' || rc.outcome_id
+          else rc.symbol
         end
         order by mds.quote_ts desc
         limit 1
       ) quote_exact on true
       left join lateral (
         select mds.last_price
-        from market_data_snapshots mds
-        left join market_instruments mi on mi.id = mds.instrument_id
-        where mds.instrument_id = da.symbol
-          or (mi.symbol = da.symbol and mi.market = da.market)
+        from market_instruments mi
+        inner join market_data_snapshots mds on mds.instrument_id = mi.id
+        where coalesce(rc.outcome_id, '') = ''
+          and mi.market = rc.market
+          and upper(mi.symbol) = upper(rc.symbol)
         order by mds.quote_ts desc
         limit 1
-      ) quote_spot on true
+      ) quote_instrument on true
       left join lateral (
         select p.market_price, p.entry_price
         from positions p
-        where p.agent_id = ds.agent_id
-          and p.symbol = da.symbol
-          and p.market = da.market
-          and coalesce(p.event_id, '') = coalesce(da.event_id, '')
-          and coalesce(p.outcome_id, '') = coalesce(da.outcome_id, '')
+        where p.agent_id = rc.agent_id
+          and p.symbol = rc.symbol
+          and p.market = rc.market
+          and coalesce(p.event_id, '') = coalesce(rc.event_id, '')
+          and coalesce(p.outcome_id, '') = coalesce(rc.outcome_id, '')
         order by p.updated_at desc
         limit 1
       ) matched_position on true
-      where a.claim_status = 'claimed'
-        and da.status in ('filled', 'partial')
-        and coalesce(te.filled_units, 0) > 0
-        and coalesce(te.fill_price, 0) > 0
-        and te.executed_at > ${startOfLast24HoursIso}
-      order by te.executed_at desc
-      limit 200
+      order by rc.executed_at desc
     `,
   ]);
 
@@ -605,44 +639,28 @@ async function queryLatestPublicLeaderboardEntryFromDatabase(agentId: string) {
       from leaderboard_snapshots ls
       inner join agents a on a.id = ls.agent_id
       where a.claim_status = 'claimed'
-    ),
-    ranked as (
-      select
-        row_number() over (order by ls.rank asc) as public_rank,
-        ls.agent_id,
-        ls.competition_id,
-        ls.return_rate,
-        ls.equity_value,
-        ls.change_24h,
-        ls.drawdown,
-        ls.model_name,
-        ls.rank_change_24h,
-        ls.snapshot_at
-      from leaderboard_snapshots ls
-      inner join latest latest_snap on latest_snap.snapshot_at = ls.snapshot_at
-      inner join agents a on a.id = ls.agent_id
-      where a.claim_status = 'claimed'
     )
     select
-      ranked.public_rank,
-      ranked.agent_id,
-      ranked.competition_id,
-      ranked.return_rate,
-      ranked.equity_value,
-      ranked.change_24h,
-      ranked.drawdown,
-      ranked.model_name,
-      ranked.rank_change_24h,
-      ranked.snapshot_at,
+      ls.rank as public_rank,
+      ls.agent_id,
+      ls.competition_id,
+      ls.return_rate,
+      ls.equity_value,
+      ls.change_24h,
+      ls.drawdown,
+      ls.model_name,
+      ls.rank_change_24h,
+      ls.snapshot_at,
       a.name as agent_name,
       a.avatar_url as agent_avatar,
       acct.risk_tag,
       acct.available_cash
-    from ranked
-    inner join agents a on a.id = ranked.agent_id
-    left join agent_accounts acct on acct.agent_id = ranked.agent_id
-    where ranked.agent_id = ${agentId}
-    order by ranked.public_rank asc
+    from leaderboard_snapshots ls
+    inner join latest latest_snap on latest_snap.snapshot_at = ls.snapshot_at
+    inner join agents a on a.id = ls.agent_id
+    left join agent_accounts acct on acct.agent_id = ls.agent_id
+    where ls.agent_id = ${agentId}
+      and a.claim_status = 'claimed'
     limit 1
   `;
   return rows[0] ?? null;
