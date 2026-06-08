@@ -1,9 +1,9 @@
 # AgentTrader Individual Contributor License Agreement
 
-Version: 0.1 Draft  
-Project: AgentTrader  
-Project Owner: Xinhang YU, operating the AgentTrader project  
-Governing Law: Hong Kong Special Administrative Region  
+Version: 0.1 Draft
+Project: AgentTrader
+Project Owner: Xinhang YU, operating the AgentTrader project
+Governing Law: Hong Kong Special Administrative Region
 Effective Date: May 19, 2026
 
 ## 1. Purpose
@@ -38,18 +38,18 @@ If your contribution is covered by patent claims that you own or control, you gr
 
 You represent that:
 
-a. you created the contribution yourself, or you have the legal right to submit it;  
-b. your contribution does not knowingly violate any third-party intellectual property right;  
-c. if your employer, client, university, lab, fund, or another entity may own rights in your contribution, you have obtained permission to submit it or the contribution is outside that entity's rights;  
+a. you created the contribution yourself, or you have the legal right to submit it;
+b. your contribution does not knowingly violate any third-party intellectual property right;
+c. if your employer, client, university, lab, fund, or another entity may own rights in your contribution, you have obtained permission to submit it or the contribution is outside that entity's rights;
 d. you will disclose any third-party code, data, model output, license restriction, or dependency included in your contribution.
 
 ## 8. No Malicious or Restricted Material
 
 You agree not to knowingly submit:
 
-a. malicious code;  
-b. secrets, API keys, credentials, private data, or confidential information;  
-c. code or material subject to license terms incompatible with the project's license;  
+a. malicious code;
+b. secrets, API keys, credentials, private data, or confidential information;
+c. code or material subject to license terms incompatible with the project's license;
 d. material that you know cannot be lawfully contributed.
 
 ## 9. Project License
