@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type {
   OwnedAgentSummary,
@@ -64,6 +64,8 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
   const [snapshotAuditLoading, setSnapshotAuditLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const locale = localeTag;
+  const initialPublicDataKey = `${agentId}:${locale}`;
+  const hydratedInitialPublicDataKey = useRef<string | null>(null);
 
   useEffect(() => {
     setTradePage(1);
@@ -90,15 +92,38 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
       });
       setTradesLoading(true);
       setEquityLoading(true);
+      setSnapshotAuditLoading(true);
+      hydratedInitialPublicDataKey.current = null;
 
       try {
         const timeZone = US_MARKET_TIME_ZONE;
-        const [summaryRes, positionsRes] = await Promise.all([
+        const [
+          summaryRes,
+          positionsRes,
+          tradesJson,
+          equityJson,
+          snapshotAuditJson,
+        ] = await Promise.all([
           fetch(
             `/api/public/agents/${agentId}/summary?tz=${encodeURIComponent(timeZone)}&locale=${encodeURIComponent(locale)}`,
             { cache: 'default' }
           ),
           fetch(`/api/public/agents/${agentId}/positions`, { cache: 'default' }),
+          fetch(`/api/public/agents/${agentId}/trades?page=1&pageSize=10`, {
+            cache: 'default',
+          })
+            .then((response) => response.json() as Promise<PublicTradesResponse>)
+            .catch(() => null),
+          fetch(`/api/public/agents/${agentId}/equity?range=1d`, {
+            cache: 'default',
+          })
+            .then((response) => response.json() as Promise<PublicEquityResponse>)
+            .catch(() => null),
+          fetch(`/api/public/agents/${agentId}/snapshot-audit`, {
+            cache: 'default',
+          })
+            .then((response) => response.json())
+            .catch(() => null),
         ]);
 
         const [summaryJson, positionsJson] = await Promise.all([
@@ -109,10 +134,30 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         if (cancelled) return;
 
         if (summaryJson?.success) {
+          let nextMeta: TradesMeta = {
+            total: 0,
+            page: 1,
+            pageSize: 10,
+            totalPages: 0,
+          };
+          if (tradesJson?.success && tradesJson.meta) {
+            nextMeta = tradesJson.meta;
+          }
+
+          hydratedInitialPublicDataKey.current = initialPublicDataKey;
           setViewMode('public');
           setSummary(summaryJson.data);
           setPositions(positionsJson?.success ? positionsJson.data || [] : []);
+          setTrades(tradesJson?.success ? tradesJson.data || [] : []);
+          setTradesMeta(nextMeta);
+          setEquity(equityJson?.success ? equityJson.data || null : null);
+          setSnapshotAudit(
+            snapshotAuditJson?.success ? snapshotAuditJson.data || null : null
+          );
           setTradeRouteBase(`/api/public/agents/${agentId}/trades`);
+          setTradesLoading(false);
+          setEquityLoading(false);
+          setSnapshotAuditLoading(false);
           return;
         }
 
@@ -131,6 +176,7 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         if (!ownedSummaryJson?.success) {
           setError(summaryJson?.error?.message || t((m) => m.publicAgent.notFound));
           setSummary(null);
+          setSnapshotAuditLoading(false);
           return;
         }
 
@@ -144,10 +190,12 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
         setSummary(mapOwnedSummaryToPublic(ownedSummary, mappedOwnedPositions, t));
         setPositions(mappedOwnedPositions);
         setTradeRouteBase(`/api/agents/${agentId}/trades`);
+        setSnapshotAuditLoading(false);
       } catch {
         if (!cancelled) {
           setError(t((m) => m.publicAgent.failed));
           setSummary(null);
+          setSnapshotAuditLoading(false);
         }
       } finally {
         if (!cancelled) {
@@ -164,6 +212,13 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
 
   useEffect(() => {
     if (!viewMode) {
+      return;
+    }
+    if (
+      viewMode === 'public' &&
+      tradePage === 1 &&
+      hydratedInitialPublicDataKey.current === initialPublicDataKey
+    ) {
       return;
     }
 
@@ -232,6 +287,9 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
       setSnapshotAuditLoading(false);
       return;
     }
+    if (hydratedInitialPublicDataKey.current === initialPublicDataKey) {
+      return;
+    }
 
     let cancelled = false;
     setSnapshotAuditLoading(true);
@@ -264,6 +322,13 @@ export function PublicAgentPageClient({ agentId }: { agentId: string }) {
 
   useEffect(() => {
     if (!viewMode) {
+      return;
+    }
+    if (
+      viewMode === 'public' &&
+      range === '1d' &&
+      hydratedInitialPublicDataKey.current === initialPublicDataKey
+    ) {
       return;
     }
 

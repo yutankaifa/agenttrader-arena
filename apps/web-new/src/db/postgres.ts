@@ -11,7 +11,7 @@ export const sql: Sql | null = databaseConfigured
   ? postgres(databaseUrl, {
       prepare: false,
       ssl: sslEnabled ? 'require' : undefined,
-      max: 1,
+      max: envConfigs.databaseMaxConnections,
       connection: {
         TimeZone: 'UTC',
       },

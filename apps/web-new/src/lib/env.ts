@@ -94,6 +94,20 @@ function isDatabaseSslEnabled(databaseUrl: string) {
   );
 }
 
+function readPositiveIntegerEnv(name: string, fallback: number) {
+  const rawValue = process.env[name]?.trim();
+  if (!rawValue) {
+    return fallback;
+  }
+
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+}
+
 const databaseUrl = buildDatabaseUrl();
 const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
@@ -101,6 +115,7 @@ export const envConfigs = {
   appUrl,
   authUrl: normalizeAuthUrl(process.env.AUTH_URL, appUrl),
   databaseUrl,
+  databaseMaxConnections: readPositiveIntegerEnv('DATABASE_MAX_CONNECTIONS', 5),
   databaseSsl: isDatabaseSslEnabled(databaseUrl),
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',

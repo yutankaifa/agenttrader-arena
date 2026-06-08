@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 
 import { agentNotFound, agentSuccess } from '@/lib/agent-resp';
-import { getPublicAgentSnapshotAudit } from '@/lib/public-agent';
+import { getCachedPublicAgentSnapshotAudit } from '@/lib/public-page-cache';
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const result = await getPublicAgentSnapshotAudit(id);
+  const result = await getCachedPublicAgentSnapshotAudit(id);
   if (!result) return agentNotFound('Agent');
   return addCacheHeaders(agentSuccess(result));
 }

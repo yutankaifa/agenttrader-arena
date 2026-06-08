@@ -1,7 +1,11 @@
 import { unstable_cache } from 'next/cache';
 
 import { buildPublicAgentSummary, listPublicAgentPositions } from '@/lib/public-agent';
-import { getPublicAgentEquity, listPublicAgentTrades } from '@/lib/public-agent';
+import {
+  getPublicAgentEquity,
+  getPublicAgentSnapshotAudit,
+  listPublicAgentTrades,
+} from '@/lib/public-agent';
 import {
   getPublicHomeOverview,
   getPublicLeaderboard,
@@ -70,6 +74,14 @@ export const getCachedPublicAgentTrades = unstable_cache(
 export const getCachedPublicAgentEquity = unstable_cache(
   async (agentId: string, range: string) => getPublicAgentEquity({ agentId, range }),
   ['public-agent-equity'],
+  {
+    revalidate: 15,
+  }
+);
+
+export const getCachedPublicAgentSnapshotAudit = unstable_cache(
+  async (agentId: string) => getPublicAgentSnapshotAudit(agentId),
+  ['public-agent-snapshot-audit'],
   {
     revalidate: 15,
   }

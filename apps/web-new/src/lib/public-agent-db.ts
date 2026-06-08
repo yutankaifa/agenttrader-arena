@@ -9,7 +9,6 @@ import { ensureAccountSnapshotPositionsTable } from '@/lib/account-snapshot-sche
 import { buildAccountPerformanceMetrics, getRiskTagForAccount } from '@/lib/account-metrics';
 import { ensureAgentAvatarUrlColumn } from '@/lib/agent-avatar-schema';
 import { ensureAgentXUrlColumn } from '@/lib/agent-x';
-import { refreshDisplayEquity } from '@/lib/display-equity';
 import { buildExecutionPath } from '@/lib/execution-path';
 import { getPublicLeaderboardEntryFromDatabase } from '@/lib/public-market-db';
 import { normalizeTimestampToIsoString } from '@/lib/timestamp';
@@ -78,6 +77,13 @@ type PublicAgentAccountRow = {
   total_equity: number | null;
   display_equity: number | null;
   risk_tag: 'high_risk' | 'close_only' | 'terminated' | null;
+};
+
+type PublicAgentLiveEquity = {
+  initialCash: number;
+  availableCash: number;
+  totalEquity: number;
+  displayEquity: number;
 };
 
 export async function getClaimedPublicAgentFromDatabase(agentId: string) {
@@ -481,16 +487,21 @@ export async function getPublicAgentEquityFromDatabase(input: {
         order by ts asc
       `;
 
+  const liveEquity = await getPublicAgentLiveEquityFromDatabase(input.agentId);
+
   if (!rows.length) {
-    const marked = await refreshDisplayEquity(input.agentId);
     const totalReturn =
-      marked.initialCash > 0
-        ? Math.round(((marked.displayEquity - marked.initialCash) / marked.initialCash) * 10000) / 100
+      liveEquity.initialCash > 0
+        ? Math.round(
+            ((liveEquity.displayEquity - liveEquity.initialCash) /
+              liveEquity.initialCash) *
+              10000
+          ) / 100
         : 0;
     return {
       series: [],
       stats: {
-        currentEquity: marked.displayEquity,
+        currentEquity: liveEquity.displayEquity,
         maxDrawdown: 0,
         totalReturn,
         dataPoints: 0,
@@ -498,27 +509,32 @@ export async function getPublicAgentEquityFromDatabase(input: {
     };
   }
 
-  const marked = await refreshDisplayEquity(input.agentId);
   const liveReturn =
-    marked.initialCash > 0
-      ? Math.round(((marked.displayEquity - marked.initialCash) / marked.initialCash) * 10000) / 100
+    liveEquity.initialCash > 0
+      ? Math.round(
+          ((liveEquity.displayEquity - liveEquity.initialCash) /
+            liveEquity.initialCash) *
+            10000
+        ) / 100
       : 0;
   const historicalPeak = Math.max(
-    marked.displayEquity,
-    ...rows.map((row) => row.equity ?? marked.displayEquity)
+    liveEquity.displayEquity,
+    ...rows.map((row) => row.equity ?? liveEquity.displayEquity)
   );
   const liveDrawdown =
     historicalPeak > 0
-      ? Math.round(((marked.displayEquity - historicalPeak) / historicalPeak) * 10000) / 100
+      ? Math.round(
+          ((liveEquity.displayEquity - historicalPeak) / historicalPeak) * 10000
+        ) / 100
       : 0;
   const lastRow = rows[rows.length - 1] ?? null;
   const seriesRows =
-    (lastRow?.equity ?? null) !== marked.displayEquity
+    (lastRow?.equity ?? null) !== liveEquity.displayEquity
       ? [
           ...rows,
           {
             ts: new Date().toISOString(),
-            equity: marked.displayEquity,
+            equity: liveEquity.displayEquity,
             drawdown: liveDrawdown,
             return_rate: liveReturn,
           },
@@ -535,11 +551,84 @@ export async function getPublicAgentEquityFromDatabase(input: {
   return {
     series,
     stats: {
-      currentEquity: marked.displayEquity,
+      currentEquity: liveEquity.displayEquity,
       maxDrawdown: Math.min(...series.map((item) => item.drawdown)),
       totalReturn: liveReturn,
       dataPoints: series.length,
     },
+  };
+}
+
+async function getPublicAgentLiveEquityFromDatabase(
+  agentId: string
+): Promise<PublicAgentLiveEquity> {
+  const sql = getSqlClient();
+  const rows = await sql<
+    {
+      initial_cash: number | null;
+      available_cash: number | null;
+      total_equity: number | null;
+      display_equity: number | null;
+      gross_market_value: number | null;
+    }[]
+  >`
+    select
+      acct.initial_cash,
+      acct.available_cash,
+      acct.total_equity,
+      acct.display_equity,
+      coalesce(position_values.gross_market_value, 0) as gross_market_value
+    from agent_accounts acct
+    left join lateral (
+      select
+        sum(
+          coalesce(p.position_size, 0) *
+          coalesce(latest_quote.last_price, nullif(p.market_price, 0), p.entry_price, 0)
+        ) as gross_market_value
+      from positions p
+      left join lateral (
+        select mds.last_price
+        from market_data_snapshots mds
+        left join market_instruments mi on mi.id = mds.instrument_id
+        where (
+          coalesce(p.outcome_id, '') <> '' and
+          mds.instrument_id = p.symbol || '::' || p.outcome_id
+        ) or (
+          coalesce(p.outcome_id, '') = '' and (
+            (mi.symbol = p.symbol and mi.market = p.market) or
+            mds.instrument_id = p.symbol
+          )
+        )
+        order by mds.quote_ts desc
+        limit 1
+      ) latest_quote on true
+      where p.agent_id = acct.agent_id
+    ) position_values on true
+    where acct.agent_id = ${agentId}
+    limit 1
+  `;
+  const row = rows[0] ?? null;
+  if (!row) {
+    return {
+      initialCash: 0,
+      availableCash: 0,
+      totalEquity: 0,
+      displayEquity: 0,
+    };
+  }
+
+  const initialCash = row.initial_cash ?? INITIAL_CAPITAL;
+  const availableCash = row.available_cash ?? initialCash;
+  const liveEquity =
+    Math.round((availableCash + (row.gross_market_value ?? 0)) * 100) / 100;
+  const storedEquity = row.display_equity ?? row.total_equity ?? initialCash;
+  const totalEquity = Number.isFinite(liveEquity) ? liveEquity : storedEquity;
+
+  return {
+    initialCash,
+    availableCash,
+    totalEquity,
+    displayEquity: totalEquity,
   };
 }
 
