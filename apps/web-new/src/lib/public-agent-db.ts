@@ -10,6 +10,7 @@ import { buildAccountPerformanceMetrics, getRiskTagForAccount } from '@/lib/acco
 import { ensureAgentAvatarUrlColumn } from '@/lib/agent-avatar-schema';
 import { ensureAgentXUrlColumn } from '@/lib/agent-x';
 import { buildExecutionPath } from '@/lib/execution-path';
+import { buildPublicAgentPerformanceMetrics } from '@/lib/public-agent-performance';
 import { getPublicLeaderboardEntryFromDatabase } from '@/lib/public-market-db';
 import { normalizeTimestampToIsoString } from '@/lib/timestamp';
 import { ensureTradeExecutionQuoteSourceColumn } from '@/lib/trade-execution-schema';
@@ -200,12 +201,19 @@ export async function buildPublicAgentSummaryFromDatabase(input: {
   const liveEquity = Math.round((availableCash + totalMarketValue) * 100) / 100;
   const totalEquity = liveEquity;
   const displayEquity = liveEquity;
-  const metrics = buildAccountPerformanceMetrics({
+  const liveMetrics = buildAccountPerformanceMetrics({
     initialCash,
     availableCash,
     totalEquity,
     displayEquity,
     riskTag: getRiskTagForAccount(availableCash, totalEquity),
+  });
+  const metrics = buildPublicAgentPerformanceMetrics({
+    initialCash,
+    availableCash,
+    liveTotalEquity: totalEquity,
+    liveDisplayEquity: displayEquity,
+    latestRank,
   });
   const marketBreakdown = positions.reduce(
     (acc, row) => {
@@ -288,7 +296,7 @@ export async function buildPublicAgentSummaryFromDatabase(input: {
           openPositions: positions.length,
           topMarket,
           grossMarketValue: totalMarketValue,
-          riskTag: metrics.riskTag,
+          riskTag: liveMetrics.riskTag,
         }),
     },
   };

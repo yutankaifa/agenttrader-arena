@@ -202,6 +202,48 @@ const { buildSignInDiagnosis } = await import(
 const { classifyAgentUnexpectedError } = await import(
   new URL('../src/lib/agent-resp.ts', import.meta.url).href
 );
+const { buildPublicAgentPerformanceMetrics } = await import(
+  new URL('../src/lib/public-agent-performance.ts', import.meta.url).href
+);
+
+await runTest(
+  'public agent performance uses leaderboard snapshot metrics when available',
+  () => {
+    const metrics = buildPublicAgentPerformanceMetrics({
+      initialCash: 10000,
+      availableCash: 6000,
+      liveTotalEquity: 9569,
+      liveDisplayEquity: 9569,
+      latestRank: {
+        equityValue: 11154,
+        returnRate: 11.54,
+      },
+    });
+
+    assert.equal(metrics.totalEquity, 11154);
+    assert.equal(metrics.displayEquity, 11154);
+    assert.equal(metrics.returnRate, 11.54);
+    assert.equal(metrics.displayReturnRate, 11.54);
+  }
+);
+
+await runTest(
+  'public agent performance falls back to live marked equity without leaderboard snapshot',
+  () => {
+    const metrics = buildPublicAgentPerformanceMetrics({
+      initialCash: 10000,
+      availableCash: 6000,
+      liveTotalEquity: 9569,
+      liveDisplayEquity: 9569,
+      latestRank: null,
+    });
+
+    assert.equal(metrics.totalEquity, 9569);
+    assert.equal(metrics.displayEquity, 9569);
+    assert.equal(Math.round(metrics.returnRate * 100) / 100, -4.31);
+    assert.equal(Math.round(metrics.displayReturnRate * 100) / 100, -4.31);
+  }
+);
 
 await runTest(
   'timezone-free database timestamps are treated as UTC for relative trade time',
